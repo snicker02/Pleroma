@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pleroma</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;overflow:hidden;font-family:'Courier New',monospace}
+#c{display:block;position:fixed;top:0;left:0;cursor:grab}
+#c:active{cursor:grabbing}
+#panel{position:fixed;top:0;right:0;width:252px;height:100vh;
+  background:rgba(3,5,14,.95);border-left:1px solid rgba(190,145,20,.18);
+  overflow-y:auto;padding:13px;color:#c49818;z-index:100;
+  transition:transform .26s ease;scrollbar-width:thin;
+  scrollbar-color:rgba(190,145,20,.2) transparent}
+#panel.hidden{transform:translateX(100%)}
+#panel::-webkit-scrollbar{width:3px}
+#panel::-webkit-scrollbar-thumb{background:rgba(190,145,20,.2)}
+.logo{font-size:11px;letter-spacing:4px;text-align:center;padding:6px 0 3px;opacity:.75}
+.sub{font-size:7px;letter-spacing:1.5px;color:#3a2c06;text-align:center;padding-bottom:12px}
+.ph{font-size:8.5px;letter-spacing:3px;border-bottom:1px solid rgba(190,145,20,.14);
+  padding-bottom:5px;margin:15px 0 10px;text-transform:uppercase}
+.ph:first-of-type{margin-top:0}
+.ctrl{margin-bottom:9px}
+label{display:flex;justify-content:space-between;font-size:8px;
+  letter-spacing:1px;color:#5a4608;margin-bottom:3px}
+label span{color:#c49818;min-width:38px;text-align:right}
+input[type=range]{width:100%;height:2px;-webkit-appearance:none;
+  background:rgba(190,145,20,.13);outline:none;cursor:pointer;display:block}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:8px;height:8px;background:#c49818}
+input[type=range]::-moz-range-thumb{width:8px;height:8px;background:#c49818;border:none;border-radius:0}
+select{width:100%;background:rgba(190,145,20,.06);border:1px solid rgba(190,145,20,.18);
+  color:#c49818;padding:4px 6px;font-family:'Courier New',monospace;
+  font-size:8px;letter-spacing:1px;cursor:pointer;outline:none;margin-top:2px}
+select option{background:#03050e}
+.btn{width:100%;padding:7px;background:rgba(190,145,20,.06);
+  border:1px solid rgba(190,145,20,.28);color:#c49818;
+  font-family:'Courier New',monospace;font-size:8px;letter-spacing:2px;
+  text-transform:uppercase;cursor:pointer;margin-bottom:5px}
+.btn:hover{background:rgba(190,145,20,.16)}
+#toggle{position:fixed;top:12px;right:12px;z-index:200;background:rgba(3,5,14,.9);
+  border:1px solid rgba(190,145,20,.34);color:#c49818;padding:7px 11px;cursor:pointer;
+  font-family:'Courier New',monospace;font-size:9px;letter-spacing:2px}
+#stat{font-size:7.5px;letter-spacing:1px;color:#3a2c06;text-align:center;padding:6px 0 2px}
+.hint{font-size:7px;letter-spacing:.4px;color:#3a2c06;margin-top:3px;line-height:1.7}
+.r2{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:5px}
+.r2 .btn{margin-bottom:0}
+hr{border:none;border-top:1px solid rgba(190,145,20,.09);margin:13px 0}
+#credit{font-size:7px;letter-spacing:.6px;color:#2f2405;text-align:center;
+  padding:10px 0 16px;line-height:1.8}
+#boot{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:#c49818;
+  font-family:'Courier New',monospace;font-size:10px;letter-spacing:3px;z-index:150}
+#boot.done{display:none}
+#err{position:fixed;inset:0;background:#000;color:#e05050;padding:20px;
+  font:11px/1.6 'Courier New',monospace;white-space:pre-wrap;overflow:auto;z-index:900;display:none}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="boot">B U I L D I N G&nbsp;&nbsp;G E O M E T R Y</div>
+<pre id="err"></pre>
+<button id="toggle">☰ CTRL</button>
+<div id="panel">
+<div class="logo">P L E R O M A</div>
+<div class="sub">SOLID ORNAMENT ENGINE</div>
+
+<div class="ph">Tunnel</div>
+<div class="ctrl"><label>RINGS (depth) <span id="ringsv">30</span></label>
+  <input type="range" id="rings" min="6" max="44" step="1" value="30"></div>
+<div class="ctrl"><label>SPOKES <span id="spokesv">7</span></label>
+  <input type="range" id="spokes" min="3" max="48" step="1" value="7"></div>
+<div class="ctrl"><label>SHELLS <span id="shellsv">1</span></label>
+  <input type="range" id="shells" min="1" max="4" step="1" value="1"></div>
+<div class="ctrl"><label>SHELL STEP <span id="shellStepv">0.55</span></label>
+  <input type="range" id="shellStep" min="0.3" max="0.95" step="0.01" value="0.55"></div>
+<div class="ctrl"><label>CONTRACTION <span id="qv">0.86</span></label>
+  <input type="range" id="q" min="0.70" max="0.96" step="0.005" value="0.86"></div>
+<div class="ctrl"><label>FUNNEL <span id="funnelv">0.12</span></label>
+  <input type="range" id="funnel" min="0" max="0.85" step="0.01" value="0.12"></div>
+<div class="ctrl"><label>TWIST / RING <span id="twistv">0.22</span></label>
+  <input type="range" id="twist" min="-1.2" max="1.2" step="0.01" value="0.22"></div>
+<div class="ctrl"><label>TUNNEL RADIUS <span id="R0v">0.62</span></label>
+  <input type="range" id="R0" min="0.2" max="1.6" step="0.01" value="0.62"></div>
+<div class="ctrl"><label>ORNAMENT SCALE <span id="S0v">0.100</span></label>
+  <input type="range" id="S0" min="0.01" max="0.6" step="0.005" value="0.10"></div>
+<div class="ctrl"><label>BRICK OFFSET <span id="brickv">0.50</span></label>
+  <input type="range" id="brick" min="0" max="1" step="0.01" value="0.5"></div>
+<p class="hint">FUNNEL 0 = straight cylinder, all apparent shrink comes from
+distance. Toward 1 the tunnel physically narrows and the scene flattens —
+0.1–0.3 keeps real depth with a vortex read.</p>
+
+<div class="ph">Ornaments</div>
+<div class="ctrl"><label>FORM SET</label><select id="mset"></select></div>
+<div class="ctrl"><label>VARIETY <span id="varietyv">1.00</span></label>
+  <input type="range" id="variety" min="0" max="1" step="0.01" value="1.0"></div>
+
+<div class="ph">Branch Fractal</div>
+<div class="ctrl"><label>SELF-SIMILARITY <span id="selfSimv">1.00</span></label>
+  <input type="range" id="selfSim" min="0" max="1" step="0.01" value="1.0"></div>
+<div class="ctrl"><label>DEPTH <span id="depthv">3</span></label>
+  <input type="range" id="depth" min="0" max="5" step="1" value="3"></div>
+<div class="ctrl"><label>BRANCHES <span id="branchesv">2</span></label>
+  <input type="range" id="branches" min="1" max="6" step="1" value="2"></div>
+<div class="ctrl"><label>CONTRACTION <span id="contractionv">0.58</span></label>
+  <input type="range" id="contraction" min="0.15" max="0.9" step="0.01" value="0.58"></div>
+<div class="ctrl"><label>ORBIT <span id="orbitv">1.55</span></label>
+  <input type="range" id="orbit" min="0.2" max="2.8" step="0.01" value="1.55"></div>
+<div class="ctrl"><label>BRANCH TILT <span id="branchTiltv">0.70</span></label>
+  <input type="range" id="branchTilt" min="0" max="1.8" step="0.01" value="0.70"></div>
+<div class="ctrl"><label>LEVEL SPIN <span id="levelSpinv">1.10</span></label>
+  <input type="range" id="levelSpin" min="0" max="3.2" step="0.01" value="1.10"></div>
+<div class="ctrl"><label>SPIN SPREAD <span id="spinSpreadv">0.25</span></label>
+  <input type="range" id="spinSpread" min="0" max="1" step="0.01" value="0.25"></div>
+<div class="ctrl"><label>TILT JITTER <span id="tiltv">0.35</span></label>
+  <input type="range" id="tilt" min="0" max="1.2" step="0.01" value="0.35"></div>
+<p class="hint">One contraction map applied over and over — the depth-3 cloud
+is a scaled copy of the depth-2 cloud.<br><br>
+SELF-SIMILARITY decides whether a child inherits its parent's form and
+ornament tile. At 1 the same shape recurs at every scale, which is what
+actually makes a cluster read as fractal; at 0 every node is a different
+random object and the recursion is still there mathematically but invisible.
+<br><br>
+The cascade also has to be big enough to SEE: contraction^depth sets the
+smallest node, so 0.6 at depth 3 gives 1.00 / 0.60 / 0.36 / 0.22. Push
+contraction down and the deep levels vanish into a few pixels.<br><br>
+Node count per wall position is (b^(d+1)−1)/(b−1) — watch the solids counter.</p>
+
+<div class="ph">Ribbons</div>
+<div class="ctrl"><label>RIBBONS <span id="ribbonsv">2</span></label>
+  <input type="range" id="ribbons" min="0" max="12" step="1" value="2"></div>
+<div class="ctrl"><label>CROSSING RIBBONS <span id="ribCrossv">2</span></label>
+  <input type="range" id="ribCross" min="0" max="10" step="1" value="2"></div>
+<div class="ctrl"><label>CROSS RADIUS <span id="ribCrossRv">1.00</span></label>
+  <input type="range" id="ribCrossR" min="0.3" max="1.6" step="0.01" value="1.0"></div>
+<div class="ctrl"><label>CROSS TURN RATIO <span id="ribCrossTurnv">1.00</span></label>
+  <input type="range" id="ribCrossTurn" min="0.2" max="3" step="0.01" value="1.0"></div>
+<div class="ctrl"><label>TURN RATE <span id="ribTurnv">1.10</span></label>
+  <input type="range" id="ribTurn" min="-4" max="4" step="0.02" value="1.1"></div>
+<div class="ctrl"><label>TUBE RADIUS <span id="ribRadiusv">0.40</span></label>
+  <input type="range" id="ribRadius" min="0.04" max="2.0" step="0.01" value="0.40"></div>
+<div class="ctrl"><label>WOBBLE <span id="ribWobblev">0.12</span></label>
+  <input type="range" id="ribWobble" min="0" max="0.6" step="0.005" value="0.12"></div>
+<div class="ctrl"><label>WOBBLE HARMONIC <span id="ribHarmv">2</span></label>
+  <input type="range" id="ribHarm" min="1" max="8" step="1" value="2"></div>
+<div class="ctrl"><label>BEADS / RING <span id="ribBeadsv">2</span></label>
+  <input type="range" id="ribBeads" min="0" max="10" step="1" value="2"></div>
+<p class="hint">Each ribbon is one continuous swept surface, not a chain of
+cylinders — the vertex shader places every vertex directly on the helix, so
+it bends smoothly with no joints or caps. The cross-section frame uses the
+radial direction projected off the tangent, which never flips; a Frenet
+frame would spin at inflections and twist the tube.<br><br>
+Wobble harmonics and beads-per-ring are integers so every sub-tier's period
+divides one ring — otherwise the fly-through pops on each wrap.</p>
+
+<div class="ctrl"><label>RIBBON SHAPE</label>
+  <select id="ribSides">
+    <option value="0">ROUND TUBE</option>
+    <option value="3">TRIANGULAR BAR</option>
+    <option value="4">SQUARE BAR</option>
+    <option value="6">HEX BAR</option>
+    <option value="8">OCTAGONAL BAR</option>
+  </select></div>
+<div class="ctrl"><label>HARD ANGLES <span id="ribStepsv">0</span></label>
+  <input type="range" id="ribSteps" min="0" max="16" step="1" value="0"></div>
+<p class="hint">RIBBON SHAPE sets the cross-section: a bar has flat faces with
+hard edges instead of a round tube.<br><br>
+HARD ANGLES bends the path itself. 0 is the smooth snake. Above that the helix
+becomes a polygon with that many corners per ring — straight runs meeting at
+sharp mitres, like bent pipe. Low values (3–6) give long angular sweeps; high
+values approach the curve again. It is a whole number per ring because any
+other spacing breaks the seamless loop.</p>
+
+<div class="ph">Ornament Print</div>
+<div class="ctrl"><label>PRINT STRENGTH <span id="texMixv">0.92</span></label>
+  <input type="range" id="texMix" min="0" max="1" step="0.01" value="0.92"></div>
+<div class="ctrl"><label>TILES AROUND <span id="tileUv">1</span></label>
+  <input type="range" id="tileU" min="1" max="10" step="1" value="1"></div>
+<div class="ctrl"><label>TILES ALONG <span id="tileVv">1</span></label>
+  <input type="range" id="tileV" min="1" max="10" step="1" value="1"></div>
+<p class="hint">16 ornament tiles — mandalas, dot rings, eyes, scales,
+paisley, filigree — drawn to a texture at load and printed onto the solids.
+<br><br>Keep TILES AROUND / ALONG at 1 unless the form is large on screen.
+Repeating a motif several times across a small form just means each copy
+lands on a few pixels, the mip chain averages it to the tile's ground
+colour, and the whole thing turns to mud. One motif per form is also what
+the references do — each dome carries a single mandala.</p>
+
+<div class="ph">Material</div>
+<div class="ctrl"><label>PALETTE</label><select id="pal"></select></div>
+<div class="ctrl"><label>HUE SPREAD <span id="hueSpreadv">0.05</span></label>
+  <input type="range" id="hueSpread" min="0" max="0.5" step="0.005" value="0.05"></div>
+<div class="ctrl"><label>INLAY SHARPNESS <span id="zoneSharpv">2.50</span></label>
+  <input type="range" id="zoneSharp" min="1" max="8" step="0.1" value="2.5"></div>
+<div class="ctrl"><label>GOLD BIAS <span id="goldBiasv">0.00</span></label>
+  <input type="range" id="goldBias" min="-0.6" max="0.6" step="0.01" value="0.0"></div>
+<div class="ctrl"><label>SURFACE BANDING</label><select id="bandType">
+  <option value="0" selected>LATITUDE RINGS</option>
+  <option value="1">CONCENTRIC RINGS</option>
+  <option value="2">PETALS</option>
+  <option value="3">CHECKER (lat)</option>
+  <option value="4">CHECKER (radial)</option></select></div>
+<div class="ctrl"><label>BAND FREQUENCY <span id="bandFreqv">1.10</span></label>
+  <input type="range" id="bandFreq" min="0.25" max="9" step="0.05" value="1.1"></div>
+<div class="ctrl"><label>BAND DEPTH <span id="bandDepthv">0.00</span></label>
+  <input type="range" id="bandDepth" min="0" max="1" step="0.01" value="0.0"></div>
+<div class="ctrl"><label>BAND BIAS <span id="bandBiasv">0.35</span></label>
+  <input type="range" id="bandBias" min="-0.7" max="0.8" step="0.01" value="0.35"></div>
+<p class="hint">Banding is evaluated in each form's own object space, so the
+pattern wraps the solid instead of sliding across it.</p>
+
+<div class="ph">Light</div>
+<div class="ctrl"><label>KEY (from the light) <span id="keyv">0.95</span></label>
+  <input type="range" id="key" min="0" max="3" step="0.02" value="0.95"></div>
+<div class="ctrl"><label>FILL (from camera) <span id="fillv">0.42</span></label>
+  <input type="range" id="fill" min="0" max="1.5" step="0.01" value="0.42"></div>
+<div class="ctrl"><label>AMBIENT <span id="ambv">0.26</span></label>
+  <input type="range" id="amb" min="0" max="0.8" step="0.01" value="0.26"></div>
+<div class="ctrl"><label>SPECULAR <span id="specv">0.30</span></label>
+  <input type="range" id="spec" min="0" max="3" step="0.02" value="0.30"></div>
+<div class="ctrl"><label>SHININESS <span id="shinev">22</span></label>
+  <input type="range" id="shine" min="4" max="160" step="1" value="22"></div>
+<div class="ctrl"><label>RIM <span id="rimIv">0.50</span></label>
+  <input type="range" id="rimI" min="0" max="2.5" step="0.02" value="0.5"></div>
+<div class="ctrl"><label>HAZE <span id="fogv">0.22</span></label>
+  <input type="range" id="fog" min="0" max="2" step="0.01" value="0.22"></div>
+<div class="ctrl"><label>LIGHT DISTANCE <span id="lightZv">60</span></label>
+  <input type="range" id="lightZ" min="4" max="300" step="1" value="60"></div>
+<div class="ctrl"><label>CORE GLOW <span id="glowIv">0.62</span></label>
+  <input type="range" id="glowI" min="0" max="3" step="0.02" value="0.62"></div>
+<div class="ctrl"><label>GLOW RADIUS <span id="glowRv">0.10</span></label>
+  <input type="range" id="glowR" min="0.02" max="0.5" step="0.005" value="0.10"></div>
+<div class="ctrl"><label>STARFIELD <span id="starsv">0.50</span></label>
+  <input type="range" id="stars" min="0" max="1.5" step="0.01" value="0.5"></div>
+<div class="ctrl"><label>VIGNETTE <span id="vigv">0.50</span></label>
+  <input type="range" id="vig" min="0" max="1.5" step="0.01" value="0.5"></div>
+
+<div class="ph">Copies</div>
+<div class="ctrl"><label>COPIES <span id="copiesv">1</span></label>
+  <input type="range" id="copies" min="1" max="4" step="1" value="1"></div>
+<div class="ctrl"><label>EDIT COPY</label>
+  <select id="copySel"><option value="0">1 (base)</option></select></div>
+<div class="ctrl"><label>OFFSET X <span id="cpxv">0.0</span></label>
+  <input type="range" id="cpx" min="-12" max="12" step="0.1" value="0"></div>
+<div class="ctrl"><label>OFFSET Y <span id="cpyv">0.0</span></label>
+  <input type="range" id="cpy" min="-12" max="12" step="0.1" value="0"></div>
+<div class="ctrl"><label>OFFSET Z <span id="cpzv">0.0</span></label>
+  <input type="range" id="cpz" min="-30" max="30" step="0.1" value="0"></div>
+<div class="ctrl"><label>TURN X <span id="crxv">0</span>°</label>
+  <input type="range" id="crx" min="-180" max="180" step="1" value="0"></div>
+<div class="ctrl"><label>TURN Y <span id="cryv">0</span>°</label>
+  <input type="range" id="cry" min="-180" max="180" step="1" value="0"></div>
+<div class="ctrl"><label>TURN Z <span id="crzv">0</span>°</label>
+  <input type="range" id="crz" min="-180" max="180" step="1" value="0"></div>
+<div class="ctrl"><label>SCALE <span id="cscv">1.00</span>×</label>
+  <input type="range" id="csc" min="0.2" max="2.5" step="0.01" value="1"></div>
+<button class="btn" id="copyFanBtn">✳ FAN OUT (spread them apart)</button>
+<button class="btn" id="copyResetBtn">⊘ RESET THIS COPY</button>
+<p class="hint">Each copy is the WHOLE structure again — every ring, ribbon and
+fractal cluster — rigidly placed with its own offset, turn and scale. They
+share one depth buffer, so where two vortexes intersect they genuinely cut
+through each other.<br><br>
+Copy 1 is the base; the sliders above edit whichever copy is selected. Turn a
+copy 90° on Y and its tunnel bores sideways through the first one. Cost is
+linear: 4 copies is 4× the triangles.</p>
+
+<div class="ph">Orientation</div>
+<div class="ctrl"><label>ROTATE X (tilt) <span id="rotXv">0</span>°</label>
+  <input type="range" id="rotX" min="-180" max="180" step="1" value="0"></div>
+<div class="ctrl"><label>ROTATE Y (turn) <span id="rotYv">0</span>°</label>
+  <input type="range" id="rotY" min="-180" max="180" step="1" value="0"></div>
+<div class="ctrl"><label>ROTATE Z (roll) <span id="rotZv">0</span>°</label>
+  <input type="range" id="rotZ" min="-180" max="180" step="1" value="0"></div>
+<div class="ctrl"><label>SPIN X <span id="spinXv">0.0</span>°/s</label>
+  <input type="range" id="spinX" min="-60" max="60" step="0.5" value="0"></div>
+<div class="ctrl"><label>SPIN Y <span id="spinYv">0.0</span>°/s</label>
+  <input type="range" id="spinY" min="-60" max="60" step="0.5" value="0"></div>
+<div class="ctrl"><label>SPIN Z <span id="spinZv">0.0</span>°/s</label>
+  <input type="range" id="spinZ" min="-60" max="60" step="0.5" value="0"></div>
+<div class="ctrl"><label>PIVOT DISTANCE <span id="pivotv">0.0</span></label>
+  <input type="range" id="pivot" min="0" max="25" step="0.1" value="0"></div>
+<button class="btn" id="levelBtn">⌖ LEVEL (zero all three)</button>
+<p class="hint">Drag the canvas to tilt and turn — it writes back into X and Y,
+so the sliders and the mouse never disagree.<br><br>
+PIVOT 0 rotates the view in place: the camera is on the tunnel axis, so past
+about 30° the tunnel swings out of frame and you see the void behind it.
+Raise PIVOT and the camera orbits a point that far down the tunnel instead,
+so the structure tumbles while staying framed. Both agree exactly at zero
+rotation, so moving PIVOT on its own changes nothing.</p>
+
+<div class="ph">Camera &amp; Motion</div>
+<div class="ctrl"><label>FIELD OF VIEW <span id="fovv">62</span>°</label>
+  <input type="range" id="fov" min="25" max="110" step="1" value="62"></div>
+<div class="ctrl"><label>FLY SPEED <span id="flyv">0.12</span></label>
+  <input type="range" id="fly" min="-0.8" max="0.8" step="0.005" value="0.12"></div>
+<div class="ctrl"><label>TUNNEL SPIN <span id="rollv">0.15</span></label>
+  <input type="range" id="roll" min="-1.5" max="1.5" step="0.01" value="0.15"></div>
+<p class="hint">TUNNEL SPIN rotates the ornaments around the tunnel axis —
+it is structural, not a camera move. Because the rings are geometric the
+fly-through loops seamlessly.</p>
+
+<div class="ph">Video</div>
+<div class="ctrl"><label>FORMAT</label><select id="vidFmt">
+  <option value="auto">AUTO (MP4 if supported)</option>
+  <option value="mp4">MP4 (H.264)</option>
+  <option value="webm">WEBM (VP9)</option></select></div>
+<div class="ctrl"><label>SHAPE</label><select id="vidShape">
+  <option value="window">WINDOW</option>
+  <option value="land" selected>LANDSCAPE 16:9</option>
+  <option value="port">PORTRAIT 9:16</option>
+  <option value="sq">SQUARE 1:1</option></select></div>
+<div class="ctrl"><label>SIZE</label><select id="vidSize">
+  <option value="720">720p</option>
+  <option value="1080" selected>1080p</option>
+  <option value="1440">1440p</option>
+  <option value="2160">4K</option></select></div>
+<div class="ctrl"><label>FRAME RATE</label><select id="vidFps">
+  <option value="24">24 fps</option>
+  <option value="30" selected>30 fps</option>
+  <option value="60">60 fps</option></select></div>
+<div class="ctrl"><label>SECONDS PER LOOP <span id="vidSecv">8</span></label>
+  <input type="range" id="vidSec" min="2" max="30" step="1" value="8"></div>
+<div class="ctrl"><label>LOOPS <span id="vidLoopsv">1</span></label>
+  <input type="range" id="vidLoops" min="1" max="4" step="1" value="1"></div>
+<div class="ctrl"><label>BITRATE <span id="vidRatev">24</span> Mbps</label>
+  <input type="range" id="vidRate" min="4" max="80" step="1" value="24"></div>
+<div class="ctrl"><label><input type="checkbox" id="vidPerfect" checked>
+  PERFECT LOOP</label></div>
+<button class="btn" id="vidBtn" style="margin-top:5px">● RECORD VIDEO</button>
+<div id="vidStat" class="hint" style="min-height:1.2em"></div>
+<p class="hint">Frames are rendered one at a time and pushed to the encoder by
+hand, so a slow scene makes the export take longer but never stutters in the
+file — the clip always plays at the chosen rate.<br><br>
+The tunnel is periodic in phase, so one loop is seamless by construction.
+PERFECT LOOP extends that to motion: it rounds TUNNEL SPIN and each SPIN axis
+to whole turns over the clip, and drives the fly-through from the frame index
+rather than FLY SPEED. Turn it off to record exactly what is on screen.<br><br>
+MP4 records in Chrome, Edge and Safari. Firefox has no MP4 encoder, so AUTO
+falls back to WebM there.</p>
+
+<div class="ph">Quality</div>
+<div class="ctrl"><label>RESOLUTION</label><select id="res">
+  <option value="0.5">MEDIUM (0.5×)</option>
+  <option value="0.75">HIGH (0.75×)</option>
+  <option value="1.0" selected>FULL (1.0×)</option>
+  <option value="1.5">ULTRA (1.5×)</option></select></div>
+<div class="ctrl"><label>SEED <span id="seedv">7</span></label>
+  <input type="range" id="seed" min="1" max="999" step="1" value="7"></div>
+
+<hr>
+<div class="r2">
+  <button class="btn" id="randBtn">⟳ SEED</button>
+  <button class="btn" id="resetBtn">↺ RESET</button>
+</div>
+<div class="ctrl"><label>SAVE LONG EDGE <span id="saveSizev">3840</span>px</label>
+  <input type="range" id="saveSize" min="1080" max="7680" step="120" value="3840"></div>
+<div class="ctrl"><label>SAVE SHAPE</label><select id="saveShape">
+  <option value="window" selected>MATCH WINDOW</option>
+  <option value="port">PORTRAIT 9:16</option>
+  <option value="land">LANDSCAPE 16:9</option>
+  <option value="sq">SQUARE 1:1</option></select></div>
+<button class="btn" id="snapBtn" style="margin-top:5px">↓ SAVE PNG</button>
+<p class="hint">Saving at a shape other than the window widens the field of
+view to suit, so the extra area is added rather than the sides being cropped.</p>
+<div id="stat">—</div>
+<div id="credit">Created with help from Claude AI</div>
+</div>
+<script type="module" src="./main.js"></script>
+</body>
+</html>
