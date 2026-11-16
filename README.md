@@ -23,9 +23,9 @@ every scale down a tunnel that contracts geometrically into a light source,
 every ring a scaled copy of the last, filled until there is no gap left —
 and surrounded by a void colour the shader literally calls `uVoid`.
 
-The reference imagery that started this project has the same quality:
-ornament packed to the edges, detail inside detail, everything organised
-around a single point of light.
+The reference imagery that started this project has the same quality: ornament packed 
+to the edges, detail inside detail, everything organised around a single point of light. 
+Those images are works by Charlie Lakel, and the look this engine reaches for is inspired by them.
 
 ---
 
