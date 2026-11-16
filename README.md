@@ -9,6 +9,26 @@ WebGL2. No dependencies. No build step.
 
 ---
 
+## The name
+
+*Pleroma* (Greek πλήρωμα, "fullness") is the term Gnostic cosmology uses for
+the totality of the divine — the realm of light, as against the *kenoma*, the
+emptiness outside it. The Pleroma is not a single thing but a structured one:
+it is filled by aeons that emanate from one source in ordered pairs and
+levels, each a diminished reflection of the one before, the whole receding
+away from its origin without ever becoming something other than itself.
+
+Which is a fair description of what the engine does. A single form recurs at
+every scale down a tunnel that contracts geometrically into a light source,
+every ring a scaled copy of the last, filled until there is no gap left —
+and surrounded by a void colour the shader literally calls `uVoid`.
+
+The reference imagery that started this project has the same quality:
+ornament packed to the edges, detail inside detail, everything organised
+around a single point of light.
+
+---
+
 ## Running it
 
 Pleroma is split into ES modules, so it needs to be served over HTTP —
