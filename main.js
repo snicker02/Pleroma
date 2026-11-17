@@ -5,7 +5,7 @@
 
 import { buildMeshes, MESH_SETS, RIB_MESH, SWEEP_SAMPLES } from './engine/meshes.js';
 import { PALETTES, hex2rgb, palArray } from './engine/palette.js';
-import { buildAtlasLayers, ATLAS_N } from './engine/atlas.js';
+import { buildAtlasLayers, ATLAS_N, MOTIF_COUNT } from './engine/atlas.js';
 import { buildLattice, solveTunnel } from './engine/lattice.js';
 import { createRenderer }         from './engine/render.js';
 import { pickFormat, record, saveBlob, loopSnap } from './engine/video.js';
@@ -93,6 +93,7 @@ function rebuildLattice() {
     ribRadius: gf('ribRadius'), ribWobble: gf('ribWobble'),
     ribHarm: gi('ribHarm'), ribBeads: gi('ribBeads'),
     ribMesh: RIB_MESH[gi('ribSides')] ?? 16,
+    motifs: MOTIF_COUNT,
     ribCorners: checkCornerBudget()
   });
   R.uploadInstances(res.buckets);
@@ -132,6 +133,12 @@ function copyTransforms(lightZ) {
   return out;
 }
 
+/* Upper-left 3x3 of a column-major mat4 — the rotation part of the view,
+   which turns a world normal into the view-space normal SSAO needs. */
+function mat3of(m) {
+  return new Float32Array([m[0],m[1],m[2], m[4],m[5],m[6], m[8],m[9],m[10]]);
+}
+
 function scene(w, h) {
   const { lambda, mu } = solveTunnel(gf('q'), gf('funnel'));
   const aspect = w / h;
@@ -156,7 +163,7 @@ function scene(w, h) {
   const axis = [ndc[0] * aspect * 0.5, ndc[1] * 0.5];
 
   return Object.assign({
-    vp, view, axis, eye,
+    vp, view, proj, viewR: mat3of(view), axis, eye,
     phase, lambda, mu,
     R0: gf('R0'), D0: 1.0, S0: gf('S0'),
     twist: gf('twist'), spin: roll, rings: gi('rings'),
@@ -170,7 +177,9 @@ function scene(w, h) {
     atlasN: ATLAS_N, texMix: gf('texMix'), debug: (window.__dbgMode|0),
     glowI: gf('glowI'), glowR: gf('glowR'), stars: gf('stars'),
     vig: gf('vig'), seed: gi('seed'),
-    copies: copyTransforms(gf('lightZ'))
+    copies: copyTransforms(gf('lightZ')),
+    aoStrength: gf('aoStr'), aoRadius: gf('aoRad'), aoBias: gf('aoBias'),
+    aoSamples: gi('aoSamp'), aoBlur: gi('aoBlur'), msaa: gi('msaa')
   }, cPal);
 }
 
@@ -260,7 +269,8 @@ function sl(id, dp) {
 const DP = {
   rings:0, spokes:0, shells:0, shine:0, lightZ:0, fov:0, seed:0,
   depth:0, branches:0, ribbons:0, ribHarm:0, ribBeads:0, ribCross:0, saveSize:0,
-  ribSteps:0,
+  ribSteps:0, aoSamp:0, aoBlur:0, msaa:0,
+  aoBias:3,
   rotX:0, rotY:0, rotZ:0, spinX:1, spinY:1, spinZ:1, pivot:1, tileU:0, tileV:0,
   q:2, glowR:2, fly:2, shellStep:2, S0:3, ribWobble:3
 };
@@ -270,6 +280,7 @@ const DP = {
  'spinSpread','tilt','hueSpread','zoneSharp','goldBias',
  'ribbons','ribTurn','ribRadius','ribWobble','ribHarm','ribBeads',
  'ribCross','ribCrossR','ribCrossTurn','ribSteps',
+ 'aoStr','aoRad','aoBias','aoSamp','aoBlur','msaa',
  'key','fill','amb','spec','shine','rimI','fog','lightZ','glowI','glowR',
  'stars','vig','fov','fly','roll','seed','bandFreq','bandDepth','bandBias',
  'rotX','rotY','rotZ','spinX','spinY','spinZ','pivot','texMix','tileU','tileV',
@@ -400,7 +411,8 @@ const DEFAULTS = {
   fov:'62', fly:'0.12', roll:'0.15', res:'1.0', seed:'7',
   saveSize:'3840', saveShape:'window',
   rotX:'0', rotY:'0', rotZ:'0', spinX:'0', spinY:'0', spinZ:'0', pivot:'0.0',
-  copies:'1', cpx:'0', cpy:'0', cpz:'0', crx:'0', cry:'0', crz:'0', csc:'1'
+  copies:'1', cpx:'0', cpy:'0', cpz:'0', crx:'0', cry:'0', crz:'0', csc:'1',
+  aoStr:'0.85', aoRad:'0.55', aoBias:'0.03', aoSamp:'16', aoBlur:'2', msaa:'4'
 };
 g('resetBtn').addEventListener('click', () => {
   Object.entries(DEFAULTS).forEach(([k, v]) => {
@@ -462,7 +474,8 @@ function framing(shape, longEdge) {
 /** Draw one frame at an export framing, into the already-resized canvas. */
 function drawFramed(f) {
   const S = scene(f.sw, f.sh);
-  S.vp = multiply(perspective(f.fov * DEG, f.aspect, 0.05, 4000), S.view);
+  S.proj = perspective(f.fov * DEG, f.aspect, 0.05, 4000);
+  S.vp = multiply(S.proj, S.view);
   const ndc = projectPoint(S.vp, [0, 0, -gf('lightZ')]) || [0, 0];
   S.axis = [ndc[0] * f.aspect * 0.5, ndc[1] * 0.5];
   R.draw(f.sw, f.sh, S);

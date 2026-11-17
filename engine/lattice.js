@@ -92,7 +92,7 @@ function qRot(q, v) {
 
 export function buildLattice(p) {
   const {
-    rings, spokes, shells, shellStep, seed, meshSet, ribMesh = 16,
+    rings, spokes, shells, shellStep, seed, meshSet, ribMesh = 16, motifs = 16,
     depth, branches, contraction, orbit, branchTilt, levelSpin, tileU, tileV,
     selfSim,
     brick, variety, hueSpread, spinSpread, tilt,
@@ -145,7 +145,7 @@ export function buildLattice(p) {
         let level = [{
           off: [0, 0, 0], q: [0, 0, 0, 1], scale: 1, n: 0,
           mesh: (rootV < variety) ? meshSet[(rootH * meshSet.length) | 0] : meshSet[0],
-          motif: Math.floor(rootH * 16) % 16
+          motif: Math.floor(rootH * motifs) % motifs
         }];
         for (let L = 0; L <= depth; L++) {
           for (const node of level) {
@@ -182,7 +182,7 @@ export function buildLattice(p) {
                 q, scale: node.scale * contraction,
                 n: node.n * branches + i + 1,
                 mesh:  inherit ? node.mesh  : meshSet[(hb * meshSet.length) | 0],
-                motif: inherit ? node.motif : Math.floor(hb * 16) % 16
+                motif: inherit ? node.motif : Math.floor(hb * motifs) % motifs
               });
             }
           }

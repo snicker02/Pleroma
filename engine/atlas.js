@@ -22,12 +22,19 @@ const TAU = Math.PI * 2;
 export const ATLAS_N = 4;                       /* 4x4 grid of tiles        */
 export const ATLAS_CELL = 512;
 export const ATLAS_PX = ATLAS_N * ATLAS_CELL;
-export const MOTIF_COUNT = 16;
+export const MOTIF_COUNT = 32;
 
 export const MOTIF_NAMES = [
   'rosette','dot rings','sunburst','eye','paisley','star mesh','mandala',
   'gear ring','scales','spiral','lotus','checker','filigree','beads',
-  'crescents','compass'
+  'crescents','compass',
+  /* 16-31 — the second half leans to ALL-OVER patterns. The original
+     sixteen were almost all centred medallions, which read as a grid of
+     badges once tiled; a repeating field reads as fabric or inlay, and
+     that mixture is what the reference imagery actually has. */
+  'chevron','guilloche','honeycomb','plume','vine','sun face','harlequin',
+  'fan','coins','ric-rac','quatrefoil','seigaiha','starfield','rope',
+  'meander','shell'
 ];
 
 /* stamp a drawing at the centre and all eight neighbour offsets, so the tile
@@ -205,9 +212,15 @@ function makeTile(x, idx, C, P) {
     });
     break;
   case 8:  /* scales — offset rows, drawn directly for a clean lap */
-    for (let row = -1; row <= 2; row++) {
-      for (let col = -1; col <= 2; col++) {
-        const cx = col*C*0.5 + (row&1 ? C*0.25 : 0), cy = row*C*0.38;
+    /* Row pitch must divide the cell, and because alternate rows are offset
+       sideways the real vertical period is TWO rows — so the pitch is C/4,
+       giving a period of C/2. The original 0.38*C divided into the cell
+       2.63 times and left a hard seam along the top edge for the life of
+       the tile. The loops also have to run past the cell on every side or
+       the band nearest an edge is simply missing. */
+    for (let row = -3; row <= 3; row++) {
+      for (let col = -2; col <= 2; col++) {
+        const cx = col*C*0.5 + (row&1 ? C*0.25 : 0), cy = row*C*0.25;
         x.save(); x.translate(cx, cy);
         x.beginPath(); x.arc(0,0,C*0.30,Math.PI,0); x.closePath();
         x.fillStyle = (row+col)%2 ? mid : deep; x.fill();
@@ -297,7 +310,7 @@ function makeTile(x, idx, C, P) {
       ring(R*0.94, R*0.035, gold); disc(R*0.20, a1); ring(R*0.20, R*0.035, ivory);
     });
     break;
-  default: /* compass rose */
+  case 15: /* compass rose */
     wrap(x, C, () => {
       disc(R*0.96, ivory);
       for (let i = 0; i < 8; i++) {
@@ -311,6 +324,300 @@ function makeTile(x, idx, C, P) {
       }
       ring(R*0.96, R*0.045, gold); ring(R*0.70, R*0.025, a1);
       disc(R*0.16, a2); ring(R*0.16, R*0.035, deep);
+    });
+    break;
+
+  /* ── 16-31 ────────────────────────────────────────────────────────────
+     The all-over patterns below are NOT stamped with wrap(). They are drawn
+     directly on a lattice whose period divides C exactly, which makes them
+     seamless by construction — a centred motif needs the nine-fold stamp
+     because it spills past the cell, but a field that repeats every C/4
+     already lines up with its own neighbour. */
+  case 16: { /* chevron weave */
+    const p16 = C/4;
+    x.fillStyle = deep; x.fillRect(-C/2,-C/2,C,C);
+    for (let row = -3; row <= 3; row++) {
+      for (let col = -3; col <= 3; col++) {
+        x.save(); x.translate(col*p16, row*p16);
+        x.beginPath();
+        x.moveTo(-p16*0.5, p16*0.18); x.lineTo(0,-p16*0.30); x.lineTo(p16*0.5, p16*0.18);
+        x.lineWidth = p16*0.20; x.strokeStyle = (row%2) ? gold : ivory; x.stroke();
+        x.beginPath();
+        x.moveTo(-p16*0.5, p16*0.46); x.lineTo(0, p16*0.0); x.lineTo(p16*0.5, p16*0.46);
+        x.lineWidth = p16*0.09; x.strokeStyle = (row%2) ? mid : a1; x.stroke();
+        x.restore();
+      }
+    }
+    break; }
+  case 17: { /* guilloche — interlaced circle band */
+    const p17 = C/6;
+    x.fillStyle = mid; x.fillRect(-C/2,-C/2,C,C);
+    for (let row = -3; row <= 3; row++) {
+      for (let col = -4; col <= 4; col++) {
+        const cx = col*p17 + ((row&1)?p17*0.5:0), cy = row*p17;
+        x.beginPath(); x.arc(cx, cy, p17*0.72, 0, TAU);
+        x.lineWidth = p17*0.11; x.strokeStyle = (col+row)%2 ? gold : ivory; x.stroke();
+        x.beginPath(); x.arc(cx, cy, p17*0.40, 0, TAU);
+        x.lineWidth = p17*0.07; x.strokeStyle = a1; x.stroke();
+      }
+    }
+    break; }
+  case 18: { /* honeycomb */
+    const hx = C/3, hy = C/4;
+    x.fillStyle = deep; x.fillRect(-C/2,-C/2,C,C);
+    for (let row = -4; row <= 4; row++) {
+      for (let col = -3; col <= 3; col++) {
+        const cx = col*hx + ((row&1)?hx*0.5:0), cy = row*hy;
+        x.save(); x.translate(cx, cy);
+        x.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const a = i/6*TAU + Math.PI/6;
+          const px = Math.cos(a)*hx*0.50, py = Math.sin(a)*hx*0.50;
+          i ? x.lineTo(px,py) : x.moveTo(px,py);
+        }
+        x.closePath();
+        x.fillStyle = (row+col)%3 ? mid : a2; x.fill();
+        x.lineWidth = hx*0.07; x.strokeStyle = gold; x.stroke();
+        x.beginPath(); x.arc(0,0,hx*0.13,0,TAU); x.fillStyle = ivory; x.fill();
+        x.restore();
+      }
+    }
+    break; }
+  case 19: /* plume */
+    wrap(x, C, () => {
+      disc(R*0.97, deep);
+      for (let i = 0; i < 14; i++) {
+        x.save(); x.rotate(i/14*TAU);
+        x.beginPath(); x.moveTo(0,0);
+        x.bezierCurveTo(R*0.34,-R*0.26, R*0.76,-R*0.20, R*0.96,0);
+        x.bezierCurveTo(R*0.76, R*0.20, R*0.34, R*0.26, 0,0);
+        x.closePath();
+        x.fillStyle = (i%2) ? mid : a2; x.fill();
+        x.lineWidth = R*0.025; x.strokeStyle = gold; x.stroke();
+        x.restore();
+      }
+      ring(R*0.97, R*0.04, gold);
+      disc(R*0.20, ivory); ring(R*0.20, R*0.04, gold); disc(R*0.08, a1);
+    });
+    break;
+  case 20: { /* vine lattice */
+    const p20 = C/2;
+    x.fillStyle = mid; x.fillRect(-C/2,-C/2,C,C);
+    for (let row = -2; row <= 2; row++) {
+      for (let col = -2; col <= 2; col++) {
+        x.save(); x.translate(col*p20, row*p20);
+        x.beginPath();
+        x.moveTo(-p20*0.5,0);
+        x.bezierCurveTo(-p20*0.25,-p20*0.40, p20*0.25, p20*0.40, p20*0.5,0);
+        x.lineWidth = p20*0.055; x.strokeStyle = gold; x.stroke();
+        x.beginPath();
+        x.moveTo(0,-p20*0.5);
+        x.bezierCurveTo(-p20*0.40,-p20*0.25, p20*0.40, p20*0.25, 0, p20*0.5);
+        x.lineWidth = p20*0.045; x.strokeStyle = ivory; x.stroke();
+        for (const [lx,ly] of [[-0.22,-0.14],[0.22,0.14],[0.14,-0.26],[-0.14,0.26]]) {
+          x.save(); x.translate(lx*p20, ly*p20);
+          x.beginPath(); x.ellipse(0,0,p20*0.085,p20*0.045,Math.PI*0.25,0,TAU);
+          x.fillStyle = a1; x.fill(); x.restore();
+        }
+        x.beginPath(); x.arc(0,0,p20*0.055,0,TAU); x.fillStyle = a2; x.fill();
+        x.restore();
+      }
+    }
+    break; }
+  case 21: /* sun face */
+    wrap(x, C, () => {
+      disc(R*0.98, deep);
+      for (let i = 0; i < 24; i++) {
+        const L = (i%2) ? R*0.74 : R*0.98;
+        x.save(); x.rotate(i/24*TAU);
+        x.beginPath(); x.moveTo(R*0.48,-R*0.05); x.lineTo(L,0); x.lineTo(R*0.48,R*0.05);
+        x.closePath(); x.fillStyle = (i%2) ? ivory : gold; x.fill(); x.restore();
+      }
+      disc(R*0.50, gold); ring(R*0.50, R*0.05, ivory);
+      disc(R*0.40, mid);
+      for (const sx of [-1, 1]) {
+        x.beginPath(); x.ellipse(sx*R*0.17,-R*0.07,R*0.09,R*0.06,0,0,TAU);
+        x.fillStyle = ivory; x.fill();
+        x.beginPath(); x.arc(sx*R*0.17,-R*0.07,R*0.035,0,TAU);
+        x.fillStyle = deep; x.fill();
+      }
+      x.beginPath(); x.arc(0, R*0.10, R*0.17, 0.15*Math.PI, 0.85*Math.PI);
+      x.lineWidth = R*0.045; x.strokeStyle = a1; x.stroke();
+    });
+    break;
+  case 22: { /* harlequin diamonds */
+    const p22 = C/4;
+    x.fillStyle = deep; x.fillRect(-C/2,-C/2,C,C);
+    for (let row = -3; row <= 3; row++) {
+      for (let col = -3; col <= 3; col++) {
+        const cx = col*p22 + ((row&1)?p22*0.5:0), cy = row*p22*0.5;
+        x.save(); x.translate(cx, cy);
+        x.beginPath();
+        x.moveTo(0,-p22*0.30); x.lineTo(p22*0.5,0);
+        x.lineTo(0,p22*0.30); x.lineTo(-p22*0.5,0); x.closePath();
+        x.fillStyle = (row+col)%2 ? gold : mid; x.fill();
+        x.lineWidth = p22*0.035; x.strokeStyle = ivory; x.stroke();
+        x.beginPath(); x.arc(0,0,p22*0.07,0,TAU);
+        x.fillStyle = (row+col)%2 ? deep : a1; x.fill();
+        x.restore();
+      }
+    }
+    break; }
+  case 23: /* fan */
+    wrap(x, C, () => {
+      disc(R*0.96, mid);
+      for (let i = 0; i < 9; i++) {
+        x.save(); x.rotate(i/9*TAU);
+        x.beginPath(); x.moveTo(0,0);
+        x.arc(0,0,R*0.94, -0.28, 0.28);
+        x.closePath();
+        x.fillStyle = (i%2) ? deep : a2; x.fill();
+        x.lineWidth = R*0.03; x.strokeStyle = gold; x.stroke();
+        for (let k = 1; k <= 3; k++) {
+          x.beginPath(); x.arc(0,0,R*0.94*k/3.6, -0.26, 0.26);
+          x.lineWidth = R*0.022; x.strokeStyle = ivory; x.stroke();
+        }
+        x.restore();
+      }
+      disc(R*0.17, gold); ring(R*0.17, R*0.035, deep);
+    });
+    break;
+  case 24: /* coins */
+    wrap(x, C, () => {
+      disc(R*0.97, deep);
+      for (let i = 0; i < 6; i++) {
+        const a = i/6*TAU;
+        x.save(); x.translate(Math.cos(a)*R*0.56, Math.sin(a)*R*0.56);
+        x.beginPath(); x.arc(0,0,R*0.33,0,TAU); x.fillStyle = gold; x.fill();
+        x.lineWidth = R*0.035; x.strokeStyle = ivory; x.stroke();
+        x.beginPath(); x.arc(0,0,R*0.17,0,TAU); x.fillStyle = mid; x.fill();
+        x.restore();
+      }
+      disc(R*0.30, a2); ring(R*0.30, R*0.05, gold);
+      disc(R*0.14, ivory);
+      ring(R*0.96, R*0.04, gold);
+    });
+    break;
+  case 25: { /* ric-rac */
+    const p25 = C/4;
+    x.fillStyle = mid; x.fillRect(-C/2,-C/2,C,C);
+    for (let row = -3; row <= 3; row++) {
+      x.beginPath();
+      for (let t = -5; t <= 5; t++) {      /* must overrun both side edges */
+        const px = t*p25*0.5, py = row*p25 + ((t&1)?p25*0.22:-p25*0.22);
+        t === -5 ? x.moveTo(px,py) : x.lineTo(px,py);
+      }
+      x.lineWidth = p25*0.17; x.strokeStyle = (row%2) ? gold : ivory; x.stroke();
+      x.lineWidth = p25*0.06; x.strokeStyle = deep; x.stroke();
+    }
+    break; }
+  case 26: { /* quatrefoil grid */
+    const p26 = C/2;
+    x.fillStyle = deep; x.fillRect(-C/2,-C/2,C,C);
+    for (let row = -2; row <= 2; row++) {
+      for (let col = -2; col <= 2; col++) {
+        x.save(); x.translate(col*p26, row*p26);
+        x.beginPath();
+        for (let i = 0; i < 4; i++) {
+          const a = i/4*TAU;
+          x.arc(Math.cos(a)*p26*0.21, Math.sin(a)*p26*0.21, p26*0.21, 0, TAU);
+        }
+        x.fillStyle = (row+col)%2 ? mid : a2; x.fill();
+        x.lineWidth = p26*0.035; x.strokeStyle = gold; x.stroke();
+        x.beginPath(); x.arc(0,0,p26*0.10,0,TAU); x.fillStyle = ivory; x.fill();
+        x.restore();
+      }
+    }
+    break; }
+  case 27: { /* seigaiha — overlapping concentric arcs */
+    const w27 = C/4;
+    x.fillStyle = deep; x.fillRect(-C/2,-C/2,C,C);
+    /* each fan fills UPWARD from its centre only, so rows must continue a
+       full fan-radius past the top of the cell or the top band is bare */
+    for (let row = -5; row <= 5; row++) {
+      for (let col = -3; col <= 3; col++) {
+        const cx = col*w27 + ((row&1)?w27*0.5:0), cy = row*w27*0.5;
+        x.save(); x.translate(cx, cy);
+        for (let k = 4; k >= 1; k--) {
+          x.beginPath(); x.arc(0,0,w27*0.5*k/4, Math.PI, 0);
+          x.closePath();
+          x.fillStyle = (k%2) ? mid : ((k===4)?a1:ivory); x.fill();
+          x.lineWidth = w27*0.018; x.strokeStyle = gold; x.stroke();
+        }
+        x.restore();
+      }
+    }
+    break; }
+  case 28: /* starfield */
+    wrap(x, C, () => {
+      disc(R*0.97, deep);
+      for (let k = 0; k < 3; k++) {
+        const n = 6 + k*2, rr = R*(0.88 - k*0.26);
+        for (let i = 0; i < n; i++) {
+          const a = i/n*TAU + k*0.3;
+          x.save(); x.translate(Math.cos(a)*rr, Math.sin(a)*rr);
+          x.beginPath();
+          for (let j = 0; j < 8; j++) {
+            const aa = j/8*TAU, L = (j%2) ? R*0.05 : R*0.13;
+            const px = Math.cos(aa)*L, py = Math.sin(aa)*L;
+            j ? x.lineTo(px,py) : x.moveTo(px,py);
+          }
+          x.closePath(); x.fillStyle = (k%2) ? gold : ivory; x.fill();
+          x.restore();
+        }
+      }
+      disc(R*0.13, a2); ring(R*0.96, R*0.035, gold);
+    });
+    break;
+  case 29: /* rope ring */
+    wrap(x, C, () => {
+      disc(R*0.97, mid);
+      for (const [rr, lw, n] of [[R*0.84, R*0.13, 26], [R*0.52, R*0.10, 16]]) {
+        for (let i = 0; i < n; i++) {
+          const a0 = i/n*TAU, a1b = (i+0.72)/n*TAU;
+          x.beginPath(); x.arc(0,0,rr,a0,a1b);
+          x.lineWidth = lw; x.strokeStyle = (i%2) ? gold : ivory; x.stroke();
+        }
+      }
+      ring(R*0.97, R*0.035, gold);
+      disc(R*0.26, deep); ring(R*0.26, R*0.045, gold); disc(R*0.11, a1);
+    });
+    break;
+  case 30: { /* meander — greek key */
+    const p30 = C/4;
+    x.fillStyle = deep; x.fillRect(-C/2,-C/2,C,C);
+    x.lineCap = 'butt';
+    for (let row = -2; row <= 2; row++) {
+      for (let col = -2; col <= 2; col++) {
+        x.save(); x.translate(col*p30, row*p30);
+        const u = p30/8;
+        x.beginPath();
+        x.moveTo(-4*u, 3*u); x.lineTo(-4*u,-2*u); x.lineTo(2*u,-2*u);
+        x.lineTo(2*u, 1*u); x.lineTo(-1*u, 1*u); x.lineTo(-1*u,-0*u);
+        x.lineWidth = u*0.9; x.strokeStyle = (row%2) ? gold : ivory; x.stroke();
+        x.beginPath();
+        x.moveTo(4*u,-3*u); x.lineTo(4*u, 2*u); x.lineTo(-2*u, 2*u);
+        x.lineWidth = u*0.9; x.strokeStyle = a1; x.stroke();
+        x.restore();
+      }
+    }
+    x.lineCap = 'round';
+    break; }
+  default: /* shell */
+    wrap(x, C, () => {
+      disc(R*0.96, deep);
+      for (let i = 0; i < 16; i++) {
+        x.save(); x.rotate(i/16*TAU - Math.PI/2);
+        x.beginPath(); x.moveTo(0, R*0.08);
+        x.quadraticCurveTo(R*0.50, R*0.17, R*0.95, 0);
+        x.quadraticCurveTo(R*0.50,-R*0.17, 0,-R*0.08);
+        x.closePath();
+        x.fillStyle = (i%2) ? mid : a2; x.fill();
+        x.lineWidth = R*0.022; x.strokeStyle = gold; x.stroke();
+        x.restore();
+      }
+      for (let k = 1; k <= 3; k++) ring(R*0.26*k, R*0.03, ivory);
+      disc(R*0.15, gold); ring(R*0.96, R*0.04, gold);
     });
     break;
   }

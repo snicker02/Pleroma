@@ -299,6 +299,30 @@ rotation, so moving PIVOT on its own changes nothing.</p>
 it is structural, not a camera move. Because the rings are geometric the
 fly-through loops seamlessly.</p>
 
+<div class="ph">Occlusion</div>
+<div class="ctrl"><label>AO STRENGTH <span id="aoStrv">0.85</span></label>
+  <input type="range" id="aoStr" min="0" max="1.5" step="0.01" value="0.85"></div>
+<div class="ctrl"><label>AO RADIUS <span id="aoRadv">0.55</span></label>
+  <input type="range" id="aoRad" min="0.05" max="3" step="0.01" value="0.55"></div>
+<div class="ctrl"><label>AO BIAS <span id="aoBiasv">0.030</span></label>
+  <input type="range" id="aoBias" min="0.002" max="0.2" step="0.002" value="0.03"></div>
+<div class="ctrl"><label>AO SAMPLES <span id="aoSampv">16</span></label>
+  <input type="range" id="aoSamp" min="4" max="32" step="4" value="16"></div>
+<div class="ctrl"><label>AO BLUR <span id="aoBlurv">2</span></label>
+  <input type="range" id="aoBlur" min="0" max="3" step="1" value="2"></div>
+<div class="ctrl"><label>ANTI-ALIAS <span id="msaav">4</span>x</label>
+  <input type="range" id="msaa" min="0" max="8" step="4" value="4"></div>
+<p class="hint">Screen-space ambient occlusion darkens where forms meet. With
+thousands of solids overlapping, nothing else tells you which one is in front
+— without it everything floats in the same evenly lit soup.<br><br>
+RADIUS is in world units: small values catch the crevices between touching
+ornaments, large ones shade whole clusters. Raise BIAS if flat surfaces
+self-shadow into stripes. SAMPLES trades noise for speed and BLUR cleans up
+what is left; at 0 you can see the raw sampling pattern.<br><br>
+Set STRENGTH to 0 to skip both passes entirely. Setting
+<code>window.__dbgMode = 10</code> in the console shows the AO buffer on its
+own, which is the quickest way to tune RADIUS and BIAS.</p>
+
 <div class="ph">Video</div>
 <div class="ctrl"><label>FORMAT</label><select id="vidFmt">
   <option value="auto">AUTO (MP4 if supported)</option>

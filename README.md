@@ -23,9 +23,10 @@ every scale down a tunnel that contracts geometrically into a light source,
 every ring a scaled copy of the last, filled until there is no gap left —
 and surrounded by a void colour the shader literally calls `uVoid`.
 
-The reference imagery that started this project has the same quality: ornament packed 
-to the edges, detail inside detail, everything organised around a single point of light. 
-Those images are works by Charlie Lakel, and the look this engine reaches for is inspired by them.
+The reference imagery that started this project has the same quality:
+ornament packed to the edges, detail inside detail, everything organised
+around a single point of light. Those images are works by **Charlie Lakel**,
+and the look this engine reaches for is inspired by them.
 
 ---
 
@@ -46,12 +47,12 @@ Or push to GitHub Pages, where it just works.
 ## The idea
 
 The look this engine targets — recursive ornamental tunnels, nested detail at
-several scales, everything receding into a glow — comes from four mechanisms.
+several scales, everything receding into a glow — comes from six mechanisms.
 
 1. **A procedural form library.** Every ornament is a lathe: a 2D profile
    revolved around an axis, with optional angular lobing. One generator yields
    domes, beads, finials, torii, rosettes, gears, starbursts and spires —
-   thirty wall forms, built at load.
+   fifty-two wall forms, built at load.
 
    Seven of them are POLYHEDRA, from the same generator. `flat: true`
    un-indexes the mesh and gives every triangle its own facet normal; with a
@@ -70,6 +71,19 @@ several scales, everything receding into a glow — comes from four mechanisms.
    One array layer per motif, not a 4x4 sheet: a single atlas cannot be
    mipmapped, because at coarse levels the cells bleed together and a form
    small on screen samples the average of all sixteen tiles.
+
+   Thirty-two motifs. The first sixteen are centred medallions; the second
+   sixteen lean to ALL-OVER fields — chevron, honeycomb, harlequin, meander,
+   seigaiha — because a tile that is a badge in the middle of a square reads
+   as a grid of badges once repeated, while a field reads as fabric or inlay.
+   The all-over tiles are not nine-stamped: they are drawn on a lattice whose
+   period divides the cell exactly, so they are seamless by construction.
+
+   Anisotropic filtering is requested where available. The tunnel wall is
+   almost entirely grazing-angle surface, which is exactly where trilinear
+   mips collapse — the hardware picks a mip for the short axis of the
+   footprint and blurs the long one away. Without it the print goes soft over
+   most of the frame.
 
    Keep `TILES AROUND`/`ALONG` at 1 unless forms are large on screen. Repeating
    a motif across a small form puts each copy on a few pixels, the mip chain
@@ -176,6 +190,29 @@ several scales, everything receding into a glow — comes from four mechanisms.
    no CPU rebuild and no extra memory. Cost is linear: four copies is four
    times the triangles.
 
+6. **Ambient occlusion.** Thousands of forms overlap and, until this existed,
+   nothing darkened where they met — every one of them floated in the same
+   evenly lit soup. That was the single biggest reason the output read as CG
+   rather than as painted ornament, and no amount of material tuning fixes
+   it, because the missing cue is contact, not surface.
+
+   The scene is therefore rendered OFF SCREEN into a G-buffer (HDR colour,
+   view-space normal, depth) and SSAO is computed from it: for each pixel the
+   view position is rebuilt from the depth buffer, a hemisphere kernel is
+   oriented to the surface normal, and each sample is projected back to the
+   screen to ask whether real geometry sits in front of it.
+
+   The kernel is rotated per pixel by a hash of the pixel COORDINATE, not of
+   anything time-varying. That trades banding for noise, which the blur
+   removes — and it keeps every frame identical to the last, which the
+   seamless-loop test demands.
+
+   Going offscreen costs the default framebuffer's MSAA, so the G-buffer is
+   itself multisampled and resolved with a blit. Dropping to one sample and
+   leaning on a post-process AA instead would have cost edge quality on
+   exactly what this engine makes: thousands of small, high-contrast
+   silhouettes.
+
 Shading is two-sided: once forms are large enough they overlap into a shell
 around the camera, and with backface culling every face would point away.
 
@@ -227,6 +264,16 @@ smaller radius, so their appearing ring is inside the frustum regardless.
 the render harness can assert what reached the GPU rather than inferring it
 from the picture.
 
+`seamtest.js` checks every atlas tile by measuring the step across the wrap
+join against the tile's OWN detail. The first version compared it to the mean
+interior step, which is useless for a sparse pattern: most rows of a meander
+are flat ground, the mean is near zero, and a legitimate hard edge landing on
+the join divides to a huge number. Comparing against the 95th percentile asks
+the right question — is this join a sharper edge than anything else in the
+tile? It found a genuine vertical seam in `scales` that had been there since
+the tile was written (row pitch 0.38C, which divides the cell 2.63 times) and
+a bare top band in `seigaiha`.
+
 `looptest.js` checks the only thing that actually matters: `frame(p)` must be
 byte-identical to `frame(p+1)`. It currently reports a mean difference of
 0.0000 with a worst channel of 0, at four separate phases.
@@ -262,11 +309,18 @@ as thin inlay rather than a half-and-half stripe.
 index.html           markup and the control panel
 main.js              UI binding, camera, frame loop
 engine/
-  meshes.js          lathe generator, 30 wall forms, swept tube + prism bars
+  meshes.js          lathe generator, 52 wall forms, swept tube + prism bars
   video.js           offline clip recording (WebCodecs / MediaRecorder)
   mp4.js             minimal ISO-BMFF muxer for H.264
+
+tools/               headless validation (needs Playwright)
+  looptest.js        phase periodicity — frame(p) must equal frame(p+1)
+  seamtest.js        atlas tile wrap check
+  atlastest.js       contact sheet of every motif
+  shot.js            render harness
+  vidtest.js         video export check (format, duration, cleanup)
   lattice.js         the recursive placement (the one idea)
-  render.js          GL resources, three draw passes
+  render.js          GL resources, the six-pass deferred-ish draw path
   palette.js         material palettes
   mat4.js            minimal matrix helpers
 ```
@@ -298,7 +352,8 @@ what the angles do.
 | Group | What matters |
 |---|---|
 | Tunnel | `CONTRACTION` and `FUNNEL` set the recursion; `SPOKES` × `SHELLS` set density |
-| Ornaments | `FORM SET` picks the vocabulary |
+| Ornaments | `FORM SET` picks the vocabulary; 18 sets over 52 forms |
+| Occlusion | `AO STRENGTH` and `AO RADIUS` do the work; raise `AO BIAS` if flats self-shadow |
 | Branch Fractal | `DEPTH` and `BRANCHES` set recursion; `CONTRACTION` and `ORBIT` set the attractor's shape |
 | Ribbons | `TURN RATE` winds them; `TUBE RADIUS` 0.4–0.6 slims them; `WOBBLE HARMONIC` must stay an integer; `RIBBON SHAPE` and `HARD ANGLES` make them angular |
 | Material | `BAND BIAS` controls how much accent shows; `INLAY SHARPNESS` how crisply |
@@ -404,8 +459,13 @@ then `SHELLS`, then `SPOKES`. Resolution scaling is in the Quality group.
 - **No LOD.** Distant forms carry the same triangle count as near ones.
 - **Uniform density.** Real compositions in this genre breathe — they have
   gaps and quiet passages. The lattice is relentless.
-- **No self-shadowing or ambient occlusion.** Contact between forms reads
-  softer than it should.
+- **AO only, no self-shadowing.** Contact darkens, but nothing casts a real
+  shadow — a form between the light and another does not darken it.
+- **AO is screen-space.** Occlusion from geometry off the edge of frame, or
+  hidden behind something nearer, is not accounted for, so the term can
+  shift slightly as the camera moves.
+- **Two forms are expensive.** `thistleRib` and `cushionStar` carry ~1000
+  triangles each against a typical 350; `LOBED` uses both.
 
 ---
 

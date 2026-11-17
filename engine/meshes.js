@@ -201,7 +201,25 @@ const P = {
            [.84,.12,.9],[.84,-.2,.25],[1.0,-.2,.9],[1.0,-.36,.2],[0,-.36,0]],
   lantern:[[0,.86,.25],[.4,.78,.9],[.64,.62,.3],[.64,-.42,.55],[.4,-.6,.9],[.52,-.7,.3],[0,-.74,0]],
   wedge:  [[0,.92,1],[.52,.5,.4],[.52,-.5,.4],[0,-.92,1]],
-  bolt:   [[0,.5,.2],[.92,.5,.95],[.92,-.5,.95],[0,-.5,.2]]
+  bolt:   [[0,.5,.2],[.92,.5,.95],[.92,-.5,.95],[0,-.5,.2]],
+
+  /* ── second wave ── */
+  trumpet:[[0,-.72,.2],[.22,-.68,.6],[.2,-.2,.3],[.34,.3,.6],[.72,.72,.95],[.86,.8,.35],[0,.82,.15]],
+  teardrop:[[0,1.2,1],[.28,.62,.6],[.46,.14,.3],[.5,-.3,.7],[.3,-.62,.95],[0,-.72,.4]],
+  bobbin: [[0,.78,.5],[.52,.74,.95],[.44,.56,.3],[.22,.2,.2],[.22,-.2,.2],[.44,-.56,.3],[.52,-.74,.95],[0,-.78,.5]],
+  cushion:[[0,.46,.3],[.42,.42,.8],[.74,.26,.5],[.84,0,.2],[.74,-.26,.5],[.42,-.42,.8],[0,-.46,.3]],
+  thistle:[[0,1.1,1],[.24,.78,.8],[.5,.46,.45],[.56,.06,.25],[.42,-.26,.7],[.5,-.5,.95],[.3,-.66,.5],[0,-.72,.2]],
+  stupa:  [[0,1.3,1],[.1,1.05,.9],[.26,.92,.3],[.2,.74,.6],[.46,.6,.9],[.4,.3,.3],[.68,.1,.85],[.76,-.3,.4],[.86,-.42,.9],[0,-.46,.2]],
+  chalice:[[0,-.8,0],[.3,-.78,.4],[.18,-.56,.6],[.16,-.1,.25],[.34,.1,.7],[.66,.5,.95],[.7,.66,.4],[0,.68,.2]],
+  knop:   [[0,.6,.4],[.3,.56,.9],[.26,.34,.3],[.5,.14,.85],[.5,-.14,.85],[.26,-.34,.3],[.3,-.56,.9],[0,-.6,.4]],
+
+  /* raw, for the faceted forms */
+  prismP: [[0,.9,.2],[.62,.9,.9],[.62,-.9,.9],[0,-.9,.2]],
+  spike:  [[0,1.4,1],[.46,.1,.5],[.46,-.3,.5],[0,-.52,.9]],
+  anvil:  [[0,.5,.2],[.5,.5,.9],[.5,.18,.3],[.86,.02,.9],[.86,-.18,.3],[.5,-.34,.9],[.5,-.5,.2],[0,-.5,.2]],
+  step3:  [[0,.84,.2],[.4,.84,.9],[.4,.5,.25],[.72,.5,.9],[.72,.1,.25],[1.0,.1,.9],[1.0,-.3,.2],[0,-.3,0]],
+  octa:   [[0,1.05,1],[.72,0,.6],[0,-1.05,1]],
+  rhomb:  [[0,.95,1],[.5,.34,.5],[.5,-.34,.5],[0,-.95,1]]
 };
 
 export const TUBE_MESH = 16;
@@ -353,7 +371,28 @@ export const MESH_DEFS = [
   { name:'bar3',      prism:3 },                                     /* 31 */
   { name:'bar4',      prism:4 },                                     /* 32 */
   { name:'bar6',      prism:6 },                                     /* 33 */
-  { name:'bar8',      prism:8 }                                      /* 34 */
+  { name:'bar8',      prism:8 },                                     /* 34 */
+
+  /* ── second wave: 35-49 ── */
+  { name:'trumpet',   profile:P.trumpet,  rows:12, segs:16 },
+  { name:'teardrop',  profile:P.teardrop, rows:11, segs:16 },
+  { name:'bobbin',    profile:P.bobbin,   rows:12, segs:14 },
+  { name:'cushion',   profile:P.cushion,  rows:10, segs:18 },
+  { name:'thistle',   profile:P.thistle,  rows:12, segs:16 },
+  { name:'stupa',     profile:P.stupa,    rows:15, segs:14 },
+  { name:'chalice',   profile:P.chalice,  rows:13, segs:16 },
+  { name:'knop',      profile:P.knop,     rows:12, segs:16 },
+  /* lobed variants — the lobe terms are what turn a plain silhouette into
+     ornament, and they were only ever applied to four of the original forms */
+  { name:'thistleRib',profile:P.thistle,  rows:12, segs:48, lobes:16, lobeAmp:.08, lobePow:1 },
+  { name:'cushionStar',profile:P.cushion, rows:10, segs:50, lobes:10, lobeAmp:.3,  lobePow:1.8 },
+  { name:'cogWheel',  profile:P.bolt,     raw:true, segs:60, lobes:20, lobeAmp:.12, lobePow:.25 },
+  { name:'twistBar',  profile:P.prismP,   raw:true, segs:6,  flat:true, twist:0.7 },
+  { name:'spikeBall', profile:P.spike,    raw:true, segs:5,  flat:true },
+  { name:'anvil',     profile:P.anvil,    raw:true, segs:4,  flat:true },
+  { name:'step3',     profile:P.step3,    raw:true, segs:6,  flat:true },
+  { name:'octa',      profile:P.octa,     raw:true, segs:4,  flat:true },
+  { name:'rhomb',     profile:P.rhomb,    raw:true, segs:6,  flat:true }
 ];
 
 /** Mesh index of each prism bar, by side count. 0 = the round tube. */
@@ -398,5 +437,11 @@ export const MESH_SETS = [
   { name: 'VESSELS II',      idx: [17,18,19,9,7,6] },
   { name: 'CRYSTALLINE',     idx: [25,29,26,24,14,2] },
   { name: 'MACHINED',        idx: [30,24,27,12,4,22] },
-  { name: 'MINIMAL',         idx: [0,1,3] }
+  { name: 'MINIMAL',         idx: [0,1,3] },
+  { name: 'EVERYTHING',      idx: [0,2,5,10,13,17,20,24,26,35,39,44,47,50] },
+  { name: 'RELIQUARY',       idx: [40,41,35,39,18,2] },
+  { name: 'SPINDLES',        idx: [36,37,42,6,1,38] },
+  { name: 'SHARDS',          idx: [47,49,50,46,25,29] },
+  { name: 'GEARWORKS',       idx: [45,30,12,48,24,37] },
+  { name: 'LOBED',           idx: [43,44,21,20,13,10] }
 ];
