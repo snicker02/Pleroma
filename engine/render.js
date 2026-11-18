@@ -163,6 +163,8 @@ uniform float uModelS;   /* per-copy object scale    */
 uniform float uPhase,uLambda,uMu,uR0,uD0,uS0,uTwist,uSpin,uRings;
 uniform float uLnLambda,uLnMu,uRibWobble,uRibHarm,uRibStart,uRibSpan;
 uniform float uRibSteps;   /* corners per ring; 0 = smooth curve */
+uniform float uCageStep;   /* rings between cages; 1 = one per ring   */
+uniform float uCageTwist;  /* cage rotation per ring                   */
 out vec3  vN, vW, vL, vNV;
 out vec2  vUv;
 out float vZone, vHue, vBody, vDist, vMotif;
@@ -186,7 +188,8 @@ void main(){
   /* A swept tube spans the whole curve in ONE instance, so its ring
      coordinate comes from the template's t (aPos.y, 0..1) rather than from
      the instance. This MUST be resolved before anything derived from e. */
-  bool ribbon = iA.w > 0.5;
+  bool cage   = iA.w > 2.5;                  /* mode 3 — polyhedral frame */
+  bool ribbon = iA.w > 0.5 && !cage;
   bool isTube = ribbon && iA.w < 1.5;
   /* Sample the tube uniformly in SCREEN-SPACE ARC, not uniformly in e.
      On-screen radius goes as q^e, so equal steps in e give long chords near
@@ -235,6 +238,19 @@ void main(){
   float fade = smoothstep(-1.0, 0.0, e)
              * (1.0 - smoothstep(uRings - 3.0, uRings - 1.0, e));
 
+  /* A cage is emitted at EVERY ring and then thinned here, by a function of
+     the continuous e rather than by an integer ring index. That distinction
+     is the whole seamless-loop rule: at phase p+1 the instance at ringE=k
+     has exactly the e that the instance at ringE=k+1 had at phase p, so any
+     function of e reproduces the same set after the slide. Emitting only
+     every Nth ring on the CPU would key placement to an integer index and
+     the cages would march one ring on every wrap. */
+  if (cage && uCageStep > 1.5) {
+    float g = fract(e / uCageStep);
+    float dd = min(g, 1.0 - g) * uCageStep;     /* rings from a cage ring */
+    fade *= 1.0 - smoothstep(0.2, 0.7, dd);
+  }
+
   /* mode 0 = wall · 1 = swept ribbon tube · 2 = ribbon rider (bead) */
   float turn  = uTwist + (ribbon ? iD.w : 0.0);
   float th    = iA.y + e * turn + uSpin;
@@ -253,12 +269,36 @@ void main(){
     dRdE = r * uLnLambda * (1.0 + uRibWobble * w) + r * uRibWobble * dw;
   }
 
-  vec3 ctr = radial * rr + axial * d;
+  vec3 ctr = radial * rr + axial * d;   /* cage overrides this below */
 
   /* local frame */
   vec3 Xp, Yp, Zp;
   float sx, sy, sz;
-  if (!ribbon) {
+  if (cage) {
+    /* CAGE — the frame is centred on the tunnel AXIS, not on the wall, and
+       its vertices ride the same recursion as everything else: radius
+       r = R0*cageR*lambda^e, depth d = D0*mu^e. Nested polyhedra therefore
+       shrink into the light exactly as the rings do, which is the whole
+       reason this is a tier of the lattice rather than a separate object.
+
+       iB.xyz is a point on the UNIT sphere; iD.x (the shell slot) carries
+       the cage radius, so it is already folded into r and pS. */
+    /* twist is a function of e, so successive cages interleave instead of
+       stacking — and it stays loop-safe for the same reason the thinning
+       pulse does */
+    float cs = cos(uSpin + e * uCageTwist), sn = sin(uSpin + e * uCageTwist);
+    Xp = vec3( cs, sn, 0.0);
+    Yp = vec3(-sn, cs, 0.0);
+    Zp = vec3(0.0, 0.0, 1.0);
+    ctr = axial * d + (Xp*iB.x + Yp*iB.y + Zp*iB.z) * r;
+    if (iD.z > 0.0) {
+      /* a strut: length is measured on the cage, thickness on the ornament
+         scale, so struts stay slender as the cage grows */
+      sy = r * iD.z; sx = pS * iA.z * iD.w; sz = sx;
+    } else {
+      sx = pS * iA.z; sy = sx; sz = sx;
+    }
+  } else if (!ribbon) {
     Yp = -radial;                 /* up points into the tunnel          */
     Zp = axial;
     Xp = vec3(st, -ct, 0.0);      /* tangent; Xp x Yp = Zp, right-handed*/
@@ -302,11 +342,12 @@ void main(){
        facet normal — that is what keeps a bar's edges hard. */
     nrm   = normalize(aNrm.x*Nn + aNrm.z*Bb);
   } else {
-    vec3 pos = ctr + (Xp*iB.x + Yp*iB.y + Zp*iB.z) * pS;
-    vec3 lp = qrot(iC, aPos);
-    vec3 ln = qrot(iC, aNrm);
-    lp = vec3(lp.x*sx, lp.y*sy, lp.z*sz) * fade;
-    ln = vec3(ln.x/max(sx,1e-6), ln.y/max(sy,1e-6), ln.z/max(sz,1e-6));
+    /* the cage already placed iB on the sphere when it built ctr */
+    vec3 pos = cage ? ctr : ctr + (Xp*iB.x + Yp*iB.y + Zp*iB.z) * pS;
+    vec3 lp = qrot(iC, vec3(aPos.x*sx, aPos.y*sy, aPos.z*sz)) * fade;
+    vec3 ln = qrot(iC, vec3(aNrm.x/max(sx,1e-6),
+                            aNrm.y/max(sy,1e-6),
+                            aNrm.z/max(sz,1e-6)));
     world = pos + Xp*lp.x + Yp*lp.y + Zp*lp.z;
     nrm   = normalize(Xp*ln.x + Yp*ln.y + Zp*ln.z);
   }
@@ -426,7 +467,7 @@ void main(){
 }`, ['aPos','aNrm','aZone','aUv','iA','iB','iC','iD','iE']);
   const ORNU = U(ORN, ['uVP','uViewR','uPhase','uLambda','uMu','uR0','uD0','uS0','uTwist','uSpin',
     'uRings','uLnLambda','uLnMu','uRibWobble','uRibHarm','uRibStart','uRibSpan',
-    'uRibSteps',
+    'uRibSteps','uCageStep','uCageTwist',
     'uBody','uAccent','uGlow','uRim','uVoid','uEye','uLightZ','uKey','uFill','uAmb',
     'uSpec','uShine','uRimI','uFog','uZoneSharp','uGoldBias',
     'uBandFreq','uBandDepth','uBandType','uBandBias',
@@ -770,6 +811,8 @@ void main(){
     gl.uniform1f(ORNU.uRibWobble, S.ribWobble);
     gl.uniform1f(ORNU.uRibHarm, S.ribHarm);
     gl.uniform1f(ORNU.uRibSteps, S.ribSteps);
+    gl.uniform1f(ORNU.uCageStep, S.cageStep);
+    gl.uniform1f(ORNU.uCageTwist, S.cageTwist);
     gl.uniform3fv(ORNU.uBody, S.cBody);
     gl.uniform3fv(ORNU.uAccent, S.cAccent);
     gl.uniform3fv(ORNU.uGlow, S.cGlow);

@@ -54,6 +54,9 @@
       visible when it changes. looptest.js checks this.
    ═════════════════════════════════════════════════════════════════════════ */
 
+import { cage, quatYTo } from './polyhedra.js';
+import { STRUT_MESHES } from './meshes.js';
+
 const TAU = Math.PI * 2;
 
 function hash(i, s) {
@@ -97,7 +100,9 @@ export function buildLattice(p) {
     selfSim,
     brick, variety, hueSpread, spinSpread, tilt,
     ribbons, ribTurn, ribRadius, ribWobble, ribHarm, ribBeads,
-    ribCross, ribCrossR, ribCrossTurn
+    ribCross, ribCrossR, ribCrossTurn,
+    cageType = 0, cageR = 1.0, cageVertForm = 0, cageVertScale = 1,
+    cageStrut = 0, cageStrutR = 0.5, cageStruts = true, cageMid = false
   } = p;
 
   const buckets = new Map();
@@ -252,6 +257,72 @@ export function buildLattice(p) {
             qAxis(0, 1, 0, hb * TAU),
             [F.shell, hb, ribRadius, F.turn],
             orn(hb, 0));
+        }
+      }
+    }
+  }
+
+  /* ── 4 : the cage ──────────────────────────────────────────────────────
+     A polyhedral frame centred on the tunnel axis, one per ring. The ring
+     range matches every other tier, down to -2, so the GUARD INVARIANT holds
+     and both ends of the set are invisible when the phase wraps.
+
+     Thinning to "every Nth ring" happens in the SHADER as a function of e,
+     not here by skipping rings: skipping would key placement to an integer
+     ring index, which is the bug that moved every bead on each wrap. */
+  const poly = cage(cageType);
+  if (poly) {
+    const strutMesh = STRUT_MESHES[Math.min(cageStrut, STRUT_MESHES.length - 1)];
+    const vertMesh  = meshSet[cageVertForm % meshSet.length];
+
+    for (let k = rings - 1; k >= -2; k--) {
+      const ringE = k;
+
+      /* vertex ornaments, standing off the sphere along the outward normal */
+      for (let vi = 0; vi < poly.V.length; vi++) {
+        const v = poly.V[vi];
+        const h = hash(vi * 31.7 + 11.3, seed);
+        push(vertMesh,
+          [ringE, 0, cageVertScale, 3],
+          [v[0], v[1], v[2], (h - 0.5) * hueSpread],
+          quatYTo(v),
+          [cageR, h, 0, 0],                 /* iD.z = 0 -> ornament scale */
+          orn(h, 0));
+      }
+
+      /* struts along every edge: sit at A, +Y turned onto B - A */
+      if (cageStruts) {
+        for (let ei = 0; ei < poly.E.length; ei++) {
+          const [a, b] = poly.E[ei];
+          const A = poly.V[a], B = poly.V[b];
+          const dx = B[0]-A[0], dy = B[1]-A[1], dz = B[2]-A[2];
+          const len = Math.hypot(dx, dy, dz) || 1e-6;
+          const h = hash(ei * 17.9 + 5.1, seed);
+          push(strutMesh,
+            [ringE, 0, 1, 3],
+            [A[0], A[1], A[2], (h - 0.5) * hueSpread * 0.5],
+            quatYTo([dx/len, dy/len, dz/len]),
+            [cageR, h, len, cageStrutR],    /* iD.z = length on the cage */
+            orn(h, 1));
+        }
+      }
+
+      /* optional ornament at each edge midpoint, pushed back out to the
+         sphere so the ring of them reads as a band rather than a dented one */
+      if (cageMid) {
+        for (let ei = 0; ei < poly.E.length; ei++) {
+          const [a, b] = poly.E[ei];
+          const A = poly.V[a], B = poly.V[b];
+          let m = [(A[0]+B[0])/2, (A[1]+B[1])/2, (A[2]+B[2])/2];
+          const L = Math.hypot(m[0], m[1], m[2]) || 1;
+          m = [m[0]/L, m[1]/L, m[2]/L];
+          const h = hash(ei * 23.3 + 71.7, seed);
+          push(vertMesh,
+            [ringE, 0, cageVertScale * 0.62, 3],
+            [m[0], m[1], m[2], (h - 0.5) * hueSpread],
+            quatYTo(m),
+            [cageR, h, 0, 0],
+            orn(h, 1));
         }
       }
     }

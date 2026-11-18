@@ -224,6 +224,14 @@ const P = {
 
 export const TUBE_MESH = 16;
 
+/* Cage struts run from vertex A to vertex B, so unlike every other form they
+   are modelled from 0 to 1 along +Y rather than centred on the origin: the
+   instance sits AT A, a quaternion turns +Y onto the edge direction, and the
+   length scale stretches it to reach B. A centred bar would need its
+   midpoint computed and would still have to be stretched, so this is one
+   fewer thing to get wrong. */
+export let STRUT_MESHES = [];   /* filled from MESH_DEFS below */
+
 /* ── swept-tube template ──────────────────────────────────────────────────
    Mesh 16 is not a cylinder. It is a parametric grid: aPos carries
    (cos(theta), t, sin(theta)) with t in 0..1 running the length of the tube.
@@ -290,6 +298,23 @@ function sweptTubeTemplate() {
    stops matching the HARD ANGLES setting. Worst case is
    (max rings + 3) * max steps = (44 + 3) * 16 = 752. */
 const PRISM_ALONG = 768;
+
+/* A bar from y=0 to y=1, waisted toward the middle by `taper` so a strut
+   reads as a spar rather than a pipe, with collars at both ends where it
+   meets a vertex ornament. */
+function strutMesh({ sides, taper, flat }) {
+  const prof = [
+    [0,          0.0,  0.15],
+    [0.50,       0.0,  0.95],
+    [0.40,       0.05, 0.35],
+    [0.32*taper, 0.26, 0.6 ],
+    [0.32*taper, 0.74, 0.6 ],
+    [0.40,       0.95, 0.35],
+    [0.50,       1.0,  0.95],
+    [0,          1.0,  0.15]
+  ];
+  return lathe({ profile: prof, segs: sides, flat });
+}
 
 function sweptPrismTemplate(sides) {
   const R = PRISM_ALONG, C = sides * 2;   /* two corner verts per facet */
@@ -392,7 +417,12 @@ export const MESH_DEFS = [
   { name:'anvil',     profile:P.anvil,    raw:true, segs:4,  flat:true },
   { name:'step3',     profile:P.step3,    raw:true, segs:6,  flat:true },
   { name:'octa',      profile:P.octa,     raw:true, segs:4,  flat:true },
-  { name:'rhomb',     profile:P.rhomb,    raw:true, segs:6,  flat:true }
+  { name:'rhomb',     profile:P.rhomb,    raw:true, segs:6,  flat:true },
+
+  /* ── cage struts: modelled 0..1 along +Y ── */
+  { name:'strutRound', strut:{ sides:12, taper:0.62, flat:false } },   /* 51 */
+  { name:'strutFacet', strut:{ sides:6,  taper:0.62, flat:true  } },   /* 52 */
+  { name:'strutBox',   strut:{ sides:4,  taper:1.0,  flat:true  } }    /* 53 */
 ];
 
 /** Mesh index of each prism bar, by side count. 0 = the round tube. */
@@ -401,10 +431,16 @@ export const RIB_MESH = { 0: TUBE_MESH, 3: 31, 4: 32, 6: 33, 8: 34 };
 /** Samples along each swept template — the corner budget for a stepped path. */
 export const SWEEP_SAMPLES = { tube: TUBE_ALONG, prism: PRISM_ALONG };
 
+/* Index lookups are DERIVED from the table, never written down twice. The
+   first version of this listed the strut indices by hand and was wrong the
+   moment a form was added above them, pointing the cage at an ornament. */
+STRUT_MESHES = MESH_DEFS.map((d, i) => d.strut ? i : -1).filter(i => i >= 0);
+
 export function buildMeshes() {
   return MESH_DEFS.map(d => {
     if (d.swept) return { name: d.name, ...sweptTubeTemplate() };
     if (d.prism) return { name: d.name, ...sweptPrismTemplate(d.prism) };
+    if (d.strut) return { name: d.name, ...strutMesh(d.strut) };
     const profile = d.ring  ? ringProfile(d.ring[0], d.ring[1], d.ring[2])
                   : d.raw   ? d.profile
                             : smoothProfile(d.profile, d.rows);

@@ -92,6 +92,10 @@ function rebuildLattice() {
     ribCrossTurn: gf('ribCrossTurn'),
     ribRadius: gf('ribRadius'), ribWobble: gf('ribWobble'),
     ribHarm: gi('ribHarm'), ribBeads: gi('ribBeads'),
+    cageType: gi('cageType'), cageR: gf('cageR'),
+    cageVertForm: gi('cageVertForm'), cageVertScale: gf('cageVertScale'),
+    cageStrut: gi('cageStrut'), cageStrutR: gf('cageStrutR'),
+    cageStruts: g('cageStruts').checked, cageMid: g('cageMid').checked,
     ribMesh: RIB_MESH[gi('ribSides')] ?? 16,
     motifs: MOTIF_COUNT,
     ribCorners: checkCornerBudget()
@@ -170,6 +174,7 @@ function scene(w, h) {
     ribStart: ribStart, ribSpan: ribSpan,
     ribWobble: gf('ribWobble'), ribHarm: gi('ribHarm'),
     ribSteps: gi('ribSteps'),
+    cageStep: gi('cageStep'), cageTwist: gf('cageTwist'),
     lightZ: gf('lightZ'), key: gf('key'), fill: gf('fill'), amb: gf('amb'),
     spec: gf('spec'), shine: gf('shine'), rimI: gf('rimI'), fog: gf('fog'),
     zoneSharp: gf('zoneSharp'), goldBias: gf('goldBias'),
@@ -270,6 +275,7 @@ const DP = {
   rings:0, spokes:0, shells:0, shine:0, lightZ:0, fov:0, seed:0,
   depth:0, branches:0, ribbons:0, ribHarm:0, ribBeads:0, ribCross:0, saveSize:0,
   ribSteps:0, aoSamp:0, aoBlur:0, msaa:0,
+  cageStep:0, cageVertForm:0,
   aoBias:3,
   rotX:0, rotY:0, rotZ:0, spinX:1, spinY:1, spinZ:1, pivot:1, tileU:0, tileV:0,
   q:2, glowR:2, fly:2, shellStep:2, S0:3, ribWobble:3
@@ -281,6 +287,7 @@ const DP = {
  'ribbons','ribTurn','ribRadius','ribWobble','ribHarm','ribBeads',
  'ribCross','ribCrossR','ribCrossTurn','ribSteps',
  'aoStr','aoRad','aoBias','aoSamp','aoBlur','msaa',
+ 'cageR','cageStep','cageTwist','cageStrutR','cageVertForm','cageVertScale',
  'key','fill','amb','spec','shine','rimI','fog','lightZ','glowI','glowR',
  'stars','vig','fov','fly','roll','seed','bandFreq','bandDepth','bandBias',
  'rotX','rotY','rotZ','spinX','spinY','spinZ','pivot','texMix','tileU','tileV',
@@ -293,7 +300,9 @@ const STRUCT = ['rings','spokes','shells','shellStep','brick','mset','variety',
   'tileU','tileV',
   'spinSpread','tilt','hueSpread','seed',
   'ribbons','ribTurn','ribRadius','ribBeads','ribCross','ribCrossR','ribCrossTurn',
-  'ribSides'];
+  'ribSides',
+  'cageType','cageR','cageStruts','cageStrut','cageStrutR','cageVertForm',
+  'cageVertScale','cageMid'];
 STRUCT.forEach(id => {
   g(id).addEventListener('input',  rebuildLattice);
   g(id).addEventListener('change', rebuildLattice);
@@ -412,7 +421,9 @@ const DEFAULTS = {
   saveSize:'3840', saveShape:'window',
   rotX:'0', rotY:'0', rotZ:'0', spinX:'0', spinY:'0', spinZ:'0', pivot:'0.0',
   copies:'1', cpx:'0', cpy:'0', cpz:'0', crx:'0', cry:'0', crz:'0', csc:'1',
-  aoStr:'0.85', aoRad:'0.55', aoBias:'0.03', aoSamp:'16', aoBlur:'2', msaa:'4'
+  aoStr:'0.85', aoRad:'0.55', aoBias:'0.03', aoSamp:'16', aoBlur:'2', msaa:'4',
+  cageType:'0', cageR:'1.6', cageStep:'4', cageTwist:'0', cageStrut:'0',
+  cageStrutR:'0.35', cageVertForm:'0', cageVertScale:'0.9'
 };
 g('resetBtn').addEventListener('click', () => {
   Object.entries(DEFAULTS).forEach(([k, v]) => {

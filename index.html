@@ -126,6 +126,47 @@ smallest node, so 0.6 at depth 3 gives 1.00 / 0.60 / 0.36 / 0.22. Push
 contraction down and the deep levels vanish into a few pixels.<br><br>
 Node count per wall position is (b^(d+1)−1)/(b−1) — watch the solids counter.</p>
 
+<div class="ph">Cage</div>
+<div class="ctrl"><label>POLYHEDRON</label><select id="cageType">
+  <option value="0" selected>OFF</option>
+  <option value="1">TETRAHEDRON</option>
+  <option value="2">CUBE</option>
+  <option value="3">OCTAHEDRON</option>
+  <option value="4">ICOSAHEDRON</option>
+  <option value="5">DODECAHEDRON</option>
+  <option value="6">CUBOCTAHEDRON</option>
+  <option value="7">ICOSIDODECAHEDRON</option>
+  <option value="8">GEODESIC 2V</option>
+  <option value="9">GEODESIC 3V</option></select></div>
+<div class="ctrl"><label>CAGE RADIUS <span id="cageRv">1.60</span></label>
+  <input type="range" id="cageR" min="0.3" max="4" step="0.05" value="1.6"></div>
+<div class="ctrl"><label>RINGS BETWEEN <span id="cageStepv">4</span></label>
+  <input type="range" id="cageStep" min="1" max="12" step="1" value="4"></div>
+<div class="ctrl"><label>CAGE TWIST <span id="cageTwistv">0.00</span></label>
+  <input type="range" id="cageTwist" min="-1.5" max="1.5" step="0.01" value="0"></div>
+<div class="ctrl"><label><input type="checkbox" id="cageStruts" checked> STRUTS</label></div>
+<div class="ctrl"><label>STRUT FORM</label><select id="cageStrut">
+  <option value="0" selected>ROUND SPAR</option>
+  <option value="1">FACETED SPAR</option>
+  <option value="2">SQUARE BAR</option></select></div>
+<div class="ctrl"><label>STRUT THICKNESS <span id="cageStrutRv">0.35</span></label>
+  <input type="range" id="cageStrutR" min="0.02" max="1.5" step="0.01" value="0.35"></div>
+<div class="ctrl"><label>VERTEX FORM <span id="cageVertFormv">0</span></label>
+  <input type="range" id="cageVertForm" min="0" max="5" step="1" value="0"></div>
+<div class="ctrl"><label>VERTEX SCALE <span id="cageVertScalev">0.90</span></label>
+  <input type="range" id="cageVertScale" min="0.1" max="4" step="0.05" value="0.9"></div>
+<div class="ctrl"><label><input type="checkbox" id="cageMid"> EDGE MIDPOINTS</label></div>
+<p class="hint">A polyhedral frame around the tunnel axis — ornaments at the
+vertices, struts along the edges. It rides the same recursion as everything
+else, so the cages nest and shrink into the light rather than sitting in
+front of the scene as one static object.<br><br>
+RINGS BETWEEN thins them out; it is applied as a function of the ring
+coordinate, not by skipping rings, so the loop stays seamless. CAGE TWIST
+turns each successive cage so they interleave instead of stacking.<br><br>
+VERTEX FORM indexes into the current FORM SET, so it changes with the set.
+GEODESIC 3V is 162 vertices and 480 struts per cage — watch the solids
+counter.</p>
+
 <div class="ph">Ribbons</div>
 <div class="ctrl"><label>RIBBONS <span id="ribbonsv">2</span></label>
   <input type="range" id="ribbons" min="0" max="12" step="1" value="2"></div>

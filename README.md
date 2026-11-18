@@ -47,7 +47,7 @@ Or push to GitHub Pages, where it just works.
 ## The idea
 
 The look this engine targets — recursive ornamental tunnels, nested detail at
-several scales, everything receding into a glow — comes from six mechanisms.
+several scales, everything receding into a glow — comes from seven mechanisms.
 
 1. **A procedural form library.** Every ornament is a lathe: a 2D profile
    revolved around an axis, with optional angular lobing. One generator yields
@@ -213,6 +213,38 @@ several scales, everything receding into a glow — comes from six mechanisms.
    exactly what this engine makes: thousands of small, high-contrast
    silhouettes.
 
+7. **A polyhedral cage.** A frame centred on the tunnel AXIS rather than on
+   the wall: ornaments at the vertices of a Platonic or Archimedean solid,
+   tapered struts along its edges. Nine solids, from the tetrahedron up to a
+   3V geodesic sphere.
+
+   Edges are DERIVED, not typed. For a uniform polyhedron the edge set is
+   exactly the pairs of vertices at the minimum pairwise distance, so there
+   is no connectivity table to mistype — and a mistyped index gives a strut
+   to nowhere that is easy to miss. Geodesics are the exception: reprojecting
+   a subdivided triangle onto the sphere leaves two distinct edge lengths, so
+   the min-distance rule finds only the shorter class (a 2V sphere came out
+   with 60 of its 120 struts). Those build their edges from the faces they
+   were subdivided into, and the result satisfies V - E + F = 2.
+
+   The cage rides the same recursion as every other tier — radius
+   `R0·cageR·λ^e`, depth `D0·μ^e` — so cages NEST and shrink into the light
+   rather than sitting in front of the scene as one static object. That is
+   the reason it is a tier of the lattice and not a separate pass.
+
+   `RINGS BETWEEN` thins them, and it is applied in the shader as a function
+   of the continuous `e`, never by skipping rings on the CPU. Skipping would
+   key placement to an integer ring index — the exact bug that marched every
+   bead one slot on each wrap. `CAGE TWIST` turns each successive cage by a
+   multiple of `e` so they interleave instead of stacking, loop-safe for the
+   same reason.
+
+   A strut is modelled from 0 to 1 along +Y instead of centred on the origin,
+   so the instance sits at vertex A with a quaternion turning +Y onto B − A
+   and a length scale reaching B. Its length is measured on the cage radius
+   and its thickness on the ornament scale, so struts stay slender as the
+   cage grows.
+
 Shading is two-sided: once forms are large enough they overlap into a shell
 around the camera, and with backface culling every face would point away.
 
@@ -322,6 +354,7 @@ tools/               headless validation (needs Playwright)
   lattice.js         the recursive placement (the one idea)
   render.js          GL resources, the six-pass deferred-ish draw path
   palette.js         material palettes
+  polyhedra.js       cage vertex/edge sets, derived not typed
   mat4.js            minimal matrix helpers
 ```
 
@@ -353,6 +386,7 @@ what the angles do.
 |---|---|
 | Tunnel | `CONTRACTION` and `FUNNEL` set the recursion; `SPOKES` × `SHELLS` set density |
 | Ornaments | `FORM SET` picks the vocabulary; 18 sets over 52 forms |
+| Cage | `POLYHEDRON` picks the solid; `CAGE RADIUS` and `RINGS BETWEEN` set how it sits around the tunnel |
 | Occlusion | `AO STRENGTH` and `AO RADIUS` do the work; raise `AO BIAS` if flats self-shadow |
 | Branch Fractal | `DEPTH` and `BRANCHES` set recursion; `CONTRACTION` and `ORBIT` set the attractor's shape |
 | Ribbons | `TURN RATE` winds them; `TUBE RADIUS` 0.4–0.6 slims them; `WOBBLE HARMONIC` must stay an integer; `RIBBON SHAPE` and `HARD ANGLES` make them angular |
