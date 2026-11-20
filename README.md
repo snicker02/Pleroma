@@ -504,3 +504,9 @@ then `SHELLS`, then `SPOKES`. Resolution scaling is in the Quality group.
 ---
 
 Created with help from Claude AI
+
+## Mobile & confirm mode
+
+* **Confirm structure changes** (Quality section, on by default): structural sliders — tunnel, ornaments, branch fractal, cage, ribbons — only update their readout and light the **⏎ APPLY CHANGES** button; press it or Enter to rebuild once. Light, material and camera sliders stay live. SEED and RESET still rebuild immediately.
+* **Phones:** the view is docked at the top and every panel section is a tab directly under it (in landscape the panel sits on the right). Controls are larger, and pinch zooms (field of view) as well as one-finger drag rotating the view.
+
