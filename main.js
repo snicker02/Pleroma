@@ -76,6 +76,7 @@ function checkCornerBudget() {
 }
 
 function rebuildLattice() {
+  structPending = false; updateApply();
   const res = buildLattice({
     rings: gi('rings'), spokes: gi('spokes'), shells: gi('shells'),
     shellStep: gf('shellStep'), seed: gi('seed'),
@@ -215,11 +216,14 @@ function frame(now) {
   }
 
   const q = gf('res');
-  const nW = Math.max(1, Math.floor(innerWidth * q));
-  const nH = Math.max(1, Math.floor(innerHeight * q));
+  /* phone layout: the canvas is docked in a box set by CSS, so size to that box */
+  const tabbed = document.body.classList.contains('tabbed');
+  const vw = tabbed ? cv.clientWidth : innerWidth, vh = tabbed ? cv.clientHeight : innerHeight;
+  const nW = Math.max(1, Math.floor(vw * q));
+  const nH = Math.max(1, Math.floor(vh * q));
   if (nW !== W || nH !== H) {
     W = nW; H = nH; cv.width = W; cv.height = H;
-    cv.style.width = innerWidth + 'px'; cv.style.height = innerHeight + 'px';
+    cv.style.width = vw + 'px'; cv.style.height = vh + 'px';
   }
 
   bucketsDrawn = R.draw(W, H, scene(W, H));
@@ -304,8 +308,8 @@ const STRUCT = ['rings','spokes','shells','shellStep','brick','mset','variety',
   'cageType','cageR','cageStruts','cageStrut','cageStrutR','cageVertForm',
   'cageVertScale','cageMid'];
 STRUCT.forEach(id => {
-  g(id).addEventListener('input',  rebuildLattice);
-  g(id).addEventListener('change', rebuildLattice);
+  g(id).addEventListener('input',  rebuildLatticeQ);
+  g(id).addEventListener('change', rebuildLatticeQ);
 });
 g('pal').addEventListener('change', rebuildPalette);
 
@@ -626,6 +630,103 @@ window.__pleroma = {
     T: Array.from(c.T), S: c.S,
     L: Array.from(c.L).map(v => +v.toFixed(2)) })); }
 };
+
+/* ── confirm structure changes ─────────────────────────────────────────
+   Structural sliders rebuild every instance buffer, which is slow on phones.
+   With CONFIRM on (the default) they only update their readout and light the
+   APPLY button; Enter or APPLY rebuilds once. Uniform sliders (light,
+   material, camera…) stay live. Buttons (seed, reset) rebuild immediately. */
+let structPending = false;
+let confirmStruct = true;
+try { const v = localStorage.getItem('pleroma.confirm'); if (v !== null) confirmStruct = v === '1'; } catch (_) {}
+function rebuildLatticeQ() {
+  if (confirmStruct) { structPending = true; updateApply(); } else rebuildLattice();
+}
+function updateApply() {
+  const b = g('applyBtn'); if (b) b.hidden = !structPending;
+}
+g('applyBtn').addEventListener('click', () => rebuildLattice());
+g('confirmStruct').checked = confirmStruct;
+g('confirmStruct').addEventListener('change', e => {
+  confirmStruct = e.target.checked;
+  try { localStorage.setItem('pleroma.confirm', confirmStruct ? '1' : '0'); } catch (_) {}
+  if (!confirmStruct && structPending) rebuildLattice();
+});
+g('randBtn').addEventListener('click', () => rebuildLattice());
+window.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || !structPending || e.repeat) return;
+  const t = e.target;
+  if (t && (t.tagName === 'BUTTON' || t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && t.type === 'text'))) return;
+  e.preventDefault(); rebuildLattice();
+});
+
+/* ── phone layout: panel sections become tabs under the docked view ──── */
+(function panelTabs() {
+  const mq = matchMedia('(max-width: 760px), (max-height: 500px) and (orientation: landscape)');
+  const panel = g('panel');
+  /* group the flat panel into sections: each .ph heading starts one; the
+     block after the <hr> (seed, reset, save) becomes SAVE */
+  const secs = [];
+  let cur = null;
+  for (const node of [...panel.children]) {
+    if (node.classList.contains('logo') || node.classList.contains('sub')) continue;
+    if (node.classList.contains('ph')) {
+      cur = document.createElement('div'); cur.className = 'psec';
+      cur.dataset.name = node.textContent.trim();
+      node.before(cur); secs.push(cur);
+    } else if (node.tagName === 'HR') {
+      cur = document.createElement('div'); cur.className = 'psec';
+      cur.dataset.name = 'Save';
+      node.before(cur); secs.push(cur);
+    }
+    if (cur && node.id !== 'stat' && node.id !== 'credit') cur.appendChild(node);
+  }
+  const bar = document.createElement('nav');
+  bar.id = 'tabbar'; bar.setAttribute('role', 'tablist');
+  panel.insertBefore(bar, secs[0]);
+  const btns = secs.map((s, i) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'tab'; b.textContent = s.dataset.name;
+    b.setAttribute('role', 'tab');
+    b.addEventListener('click', () => select(i));
+    bar.appendChild(b); return b;
+  });
+  let curTab = 0;
+  try { const v = +localStorage.getItem('pleroma.tab'); if (v >= 0 && v < secs.length) curTab = v; } catch (_) {}
+  function select(i, scroll = true) {
+    curTab = i;
+    secs.forEach((s, j) => { s.classList.toggle('tabon', j === i); btns[j].classList.toggle('sel', j === i); btns[j].setAttribute('aria-selected', j === i); });
+    panel.scrollTop = 0;
+    if (scroll) btns[i].scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+    try { localStorage.setItem('pleroma.tab', String(i)); } catch (_) {}
+  }
+  const apply = () => {
+    document.body.classList.toggle('tabbed', mq.matches);
+    if (mq.matches) panel.classList.remove('hidden');
+  };
+  if (mq.addEventListener) mq.addEventListener('change', apply); else mq.addListener(apply);
+  select(curTab, false); apply();
+})();
+
+/* ── pinch to zoom (field of view) on touch screens ──────────────────── */
+{
+  let pinch0 = 0, fov0 = 0;
+  cv.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+      drag = false;
+      pinch0 = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      fov0 = gf('fov');
+    }
+  }, { passive: false });
+  cv.addEventListener('touchmove', e => {
+    if (e.touches.length !== 2 || !pinch0) return;
+    const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+    const f = g('fov');
+    const v = Math.max(+f.min, Math.min(+f.max, fov0 * pinch0 / Math.max(1, d)));
+    f.value = v.toFixed(0); f.dispatchEvent(new Event('input'));
+  }, { passive: false });
+  cv.addEventListener('touchend', e => { if (e.touches.length < 2) pinch0 = 0; });
+}
 
 /* ── boot ── */
 rebuildPalette();
