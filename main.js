@@ -734,3 +734,16 @@ rebuildLattice();
 copySelRefresh();
 g('boot').classList.add('done');
 requestAnimationFrame(frame);
+
+/* ── shared image shelf (snicker02.github.io/shared/bridge.js) ────────────
+   preserveDrawingBuffer is on, so the current view is read straight off the canvas. */
+if (window.SnickerShelf) {
+  window.SnickerShelf.mount({
+    app: 'Pleroma',
+    button: g('shelfBtn'),
+    getImage: () => new Promise((res, rej) => cv.toBlob(b => b ? res(b) : rej(new Error('encode failed')), 'image/png')),
+    getMeta: () => ({ name: 'pleroma_' + cv.width + 'x' + cv.height + '_' + Date.now() + '.png' }),
+  });
+} else {
+  g('shelfBtn').hidden = true;
+}
