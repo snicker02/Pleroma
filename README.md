@@ -501,6 +501,10 @@ then `SHELLS`, then `SPOKES`. Resolution scaling is in the Quality group.
 - **Two forms are expensive.** `thistleRib` and `cushionStar` carry ~1000
   triangles each against a typical 350; `LOBED` uses both.
 
+## License
+
+MIT — see [LICENSE](LICENSE).
+
 ---
 
 Created with help from Claude AI
